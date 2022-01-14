@@ -1,17 +1,17 @@
-#include <stdio.h>
+#include <stdio.h> 
 #include <stdlib.h>
 #include <fcntl.h>
-#include <unistd.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/socket.h>
+#include <unistd.h> 
+#include <string.h> 
+#include <sys/types.h> 
+#include <sys/socket.h> 
+#include <arpa/inet.h> 
 #include <netinet/in.h>
-#include <arpa/inet.h>
 
 #define MAXN 100000     // The maximum size of the file being read
 #define CHUNK_SIZE 50   // The chunk size with which we will send the file to the server
 #define OUT_SIZE 200    // The size of the buffer used to store the output
-#define PORT 20000      // The port number on which the server will be listening
+#define PORT 20001      // The port number on which the server will be listening
 
 int main(int argc, char *argv[])
 {
@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
     close(fd);      // Close the file descriptor
 
     // Create a TCP socket for the client
-    if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+    if((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
         perror("Unable to create socket\n");
         exit(1);
     }
@@ -57,12 +57,6 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    // The connect() system call establishes a connection with the server process
-    if(connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
-        perror("Unable to connect to server\n");
-        exit(1);
-    }
-
     // file_buf is used to send the file in chunks to the server, out stores the output received from the server
     char file_buf[CHUNK_SIZE], out[OUT_SIZE];
     memset(file_buf, 0, sizeof(file_buf));
@@ -75,7 +69,7 @@ int main(int argc, char *argv[])
             file_buf[i] = buf[next_ind + i];
         }
         next_ind += i;
-        sz = send(sockfd, file_buf, i, 0);      // Send CHUNK_SIZE (or whatever remains at the end) bytes to the server
+        sz = sendto(sockfd, file_buf, i, 0, (struct sockaddr *) &serv_addr, sizeof(serv_addr));     // Send to the server
         if(sz < 0) {
             perror("Unable to send to socket\n");
             exit(1);
@@ -83,7 +77,7 @@ int main(int argc, char *argv[])
     }
 
     // Receive the number of characters, words and sentences from the server
-    sz = recv(sockfd, out, OUT_SIZE, 0);
+    sz = recvfrom(sockfd, out, OUT_SIZE, 0, NULL, NULL);
     if(sz < 0) {
         perror("Unable to read from socket\n");
         exit(1);
