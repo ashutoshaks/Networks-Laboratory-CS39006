@@ -99,6 +99,7 @@ int main(int argc, char *argv[])
             }
             num_chars += n;     // Update the number of characters read
         }
+        num_chars--;    // to account for the extra '.' at the end of the input
 
         // send the results to the client
         memset(out, 0, sizeof(out));

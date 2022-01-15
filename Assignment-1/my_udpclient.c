@@ -31,6 +31,7 @@ int main(int argc, char *argv[])
         perror("Unable to read file\n");
         exit(1);
     }
+    buf[n++] = '.';
     buf[n] = '\0';
     close(fd);      // Close the file descriptor
 
@@ -80,6 +81,10 @@ int main(int argc, char *argv[])
     sz = recvfrom(sockfd, out, OUT_SIZE, 0, NULL, NULL);
     if(sz < 0) {
         perror("Unable to read from socket\n");
+        exit(1);
+    }
+    else if(sz == 0) {
+        printf("Server closed the connection\n");
         exit(1);
     }
     

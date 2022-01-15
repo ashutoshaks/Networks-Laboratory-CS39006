@@ -31,6 +31,7 @@ int main(int argc, char *argv[])
         perror("Unable to read file\n");
         exit(1);
     }
+    buf[n++] = '.';
     buf[n] = '\0';
     close(fd);      // Close the file descriptor
 
@@ -83,10 +84,22 @@ int main(int argc, char *argv[])
     }
 
     // Receive the number of characters, words and sentences from the server
-    sz = recv(sockfd, out, OUT_SIZE, 0);
-    if(sz < 0) {
-        perror("Unable to read from socket\n");
-        exit(1);
+    while(1) {
+        char temp[OUT_SIZE];
+        memset(temp, 0, sizeof(temp));
+        sz = recv(sockfd, temp, OUT_SIZE, 0);
+        if(sz < 0) {
+            perror("Unable to read from socket\n");
+            exit(1);
+        }
+        else if(sz == 0) {
+            perror("Connection closed by server\n");
+            exit(1);
+        }
+        strcat(out, temp);
+        if(temp[sz - 1] == '\0') {
+            break;
+        }
     }
     
     printf("%s", out);      // Print the output received from the server
