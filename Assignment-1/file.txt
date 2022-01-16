@@ -1,1 +1,0 @@
-In this assignment, you will write a client-server system using TCP sockets. Specifically, you will write two programs, a TCP client program and an iterative TCP server program..

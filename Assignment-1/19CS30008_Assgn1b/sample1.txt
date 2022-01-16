@@ -1,0 +1,10 @@
+This is it.
+This     is   it.
+This is    it    .
+    This is   it.
+abc3 def
+abc3      def
+abc3.def
+abc3.  def
+abc3   .def
+abc3    .   def.
