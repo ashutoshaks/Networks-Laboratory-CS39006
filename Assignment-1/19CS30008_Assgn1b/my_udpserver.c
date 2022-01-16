@@ -1,15 +1,14 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-#include <sys/types.h>
+#include <stdio.h> 
+#include <stdlib.h> 
+#include <unistd.h> 
+#include <string.h> 
+#include <sys/types.h> 
 #include <sys/socket.h> 
+#include <arpa/inet.h> 
 #include <netinet/in.h>
-#include <arpa/inet.h>
 
 #define MAXN 100        // Maximum size of buffer
-#define OUT_SIZE 200    // Maximum size of output
-#define PORT 20000      // Port number
+#define PORT 20001      // Port number
 
 // Function to check if a character is alphanumeric
 int isAlphaNum(char c) {
@@ -18,16 +17,16 @@ int isAlphaNum(char c) {
 
 int main(int argc, char *argv[]) 
 {
-    int sockfd, newsockfd;      // Socket file descriptors
-    int clilen;
+    int sockfd;     // Socket file descriptor
     struct sockaddr_in cli_addr, serv_addr;
+    socklen_t clilen;
 
     // buf stores the input from the client, out is used to send the required output back to the client
-    char buf[MAXN], out[OUT_SIZE];
+    char buf[MAXN], out[MAXN];
     memset(buf, 0, sizeof(buf));
 
-    // Create a TCP socket for the server, a negative return value indicates an error
-    if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+    // Create a UDP socket for the server, a negative return value indicates an error
+    if((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
         perror("Unable to create socket\n");
         exit(1);
     }
@@ -46,25 +45,17 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    // Specifies that up to 5 concurrent client requests will be queued up while the system is executing the "accept" system call below
-    listen(sockfd, 5);
-
     while(1) {
         clilen = sizeof(cli_addr);
-
-        // The accept system call blocks until a client connects to the server
-        newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
-        if(newsockfd < 0) {
-            perror("Unable to accept connection\n");
-            exit(1);
-        }
+        printf("Server waiting for client connection\n");
 
         int num_sentences = 0, num_words = 0, num_chars = 0, sz;
         int end = 0;    // Flag to indicate whether we have reached the end of the input file
         char last_char = '\0';      // Stores the last character read
 
         while(!end) {
-            int n = recv(newsockfd, buf, MAXN, 0);  // Receive a message from the socket
+            // Receive the bytes of data from the client
+            int n = recvfrom(sockfd, buf, MAXN, 0, (struct sockaddr *) &cli_addr, &clilen);
             if(n < 0) {
                 perror("Unable to read from socket\n");
                 exit(1);
@@ -104,14 +95,14 @@ int main(int argc, char *argv[])
         // send the results to the client
         memset(out, 0, sizeof(out));
         sprintf(out, "Number of characters: %d\nNumber of words: %d\nNumber of sentences: %d\n", num_chars, num_words, num_sentences);
-        sz = send(newsockfd, out, strlen(out) + 1, 0);
+        sz = sendto(sockfd, out, strlen(out) + 1, 0, (struct sockaddr *) &cli_addr, sizeof(cli_addr));
         if(sz < 0) {
             perror("Unable to send to socket\n");
             exit(1);
         }
-        close(newsockfd);   // Close the socket newsockfd
+        printf("Sent number of characters, words and sentences to client\n\n");
     }
 
-    close(sockfd);      // Close the socket sockfd
+    close(sockfd);      // Close the socket
     return 0;
 }

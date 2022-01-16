@@ -1,0 +1,5 @@
+The client reads the name of a text file from the user as a command line argument. It 
+then looks for the file in the local directory. If the file is not there, it prints a suitable error 
+message and exits. If the file is found, the steps below are executed. 
+You can assume that the file name has maximum 100 characters and the file, if found, 
+will always be a text file containing English sentences.
