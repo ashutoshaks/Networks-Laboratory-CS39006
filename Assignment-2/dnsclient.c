@@ -1,27 +1,21 @@
 #include <stdio.h> 
 #include <stdlib.h>
-#include <fcntl.h>
 #include <unistd.h> 
 #include <string.h> 
-#include <sys/types.h> 
+#include <sys/time.h>
+#include <sys/types.h>
 #include <sys/socket.h> 
 #include <arpa/inet.h> 
 #include <netinet/in.h>
 
 #define MAXN 100        // The maximum size of the file being read
-#define CHUNK_SIZE 50   // The chunk size with which we will send the file to the server
+#define IP_SIZE 20      // The size to store one IP address
 #define PORT 20000      // The port number on which the server will be listening
 
-int main(int argc, char *argv[])
+int main()
 {
-    int sockfd, fd;
+    int sockfd;
     struct sockaddr_in serv_addr;
-
-    char *filename = argv[1];
-    if((fd = open(filename, O_RDONLY)) < 0) {   // Open the file which has to be read
-        perror("File not found\n");
-        exit(1);
-    }
 
     // Create a TCP socket for the client
     if((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
@@ -46,36 +40,60 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    char file_buf[CHUNK_SIZE], out[MAXN];
-    memset(file_buf, 0, sizeof(file_buf));
+    char buf[MAXN], out[IP_SIZE];
+    memset(buf, 0, sizeof(buf));
     memset(out, 0, sizeof(out));
 
-    int len = 0;
-    do {
-        len = read(fd, file_buf, CHUNK_SIZE);
-        if(len > 0) {
-            sendto(sockfd, file_buf, len, 0, (struct sockaddr *) &serv_addr, sizeof(serv_addr));
+    printf("Enter the DNS name:\n");
+    scanf("%s", buf);
+    sendto(sockfd, buf, strlen(buf) + 1, 0, (struct sockaddr *) &serv_addr, sizeof(serv_addr));
+
+    fd_set fd;
+    FD_ZERO(&fd);
+    FD_SET(sockfd, &fd);
+
+    struct timeval tv;
+    tv.tv_sec = 2;
+    tv.tv_usec = 0;
+
+    int received = 0;
+
+    while(1) {
+        int ret = select(sockfd + 1, &fd, NULL, NULL, &tv);
+        if(ret < 0) {
+            perror("Unable to select\n");
+            exit(1);
         }
-    } while(len > 0);
-    
-    // It is assumed that the input text file will end with a single full stop.
-    sendto(sockfd, ".", 1, 0, (struct sockaddr *) &serv_addr, sizeof(serv_addr));
 
-    close(fd);
-
-    // Receive the number of characters, words and sentences from the server
-    int sz = recvfrom(sockfd, out, MAXN, 0, NULL, NULL);
-    if(sz < 0) {
-        perror("Unable to read from socket\n");
-        exit(1);
+        if(FD_ISSET(sockfd, &fd)) {
+            memset(out, 0, sizeof(out));
+            int n = recvfrom(sockfd, out, IP_SIZE, 0, NULL, NULL);
+            if(n < 0) {
+                perror("Unable to read from socket\n");
+                exit(1);
+            }
+            if(strcmp(out, "0.0.0.0") == 0) {
+                printf("\nNo such host found\n");
+                exit(1);
+            }
+            if(received == 0) {
+                printf("\nIP address(es) for %s:\n", buf);
+            }
+            printf("%s\n", out);
+            received = 1;
+        }
+        else {
+            close(sockfd);
+            if(received == 0) {
+                printf("\nTimed out in 2 sec - No response from server\n");
+                exit(1);
+            }
+            else {
+                exit(0);
+            }
+        }
     }
-    else if(sz == 0) {
-        printf("Server closed the connection\n");
-        exit(1);
-    }
-    
-    printf("%s", out);      // Print the output received from the server
 
-    close(sockfd);      // Close the socket
+    close(sockfd);
     return 0;
 }
