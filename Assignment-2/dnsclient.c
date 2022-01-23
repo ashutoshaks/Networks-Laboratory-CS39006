@@ -17,7 +17,7 @@ int main()
     int sockfd;
     struct sockaddr_in serv_addr;
 
-    // Create a TCP socket for the client
+    // Create a UDP socket for the client
     if((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
         perror("Unable to create socket\n");
         exit(1);
