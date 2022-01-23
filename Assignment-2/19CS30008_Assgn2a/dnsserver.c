@@ -38,7 +38,6 @@ int main()
         exit(1);
     }
 
-    // buf stores the input from the client, out is used to send the required output back to the client
     char buf[MAXN], out[IP_SIZE];
     memset(buf, 0, sizeof(buf));
     memset(out, 0, sizeof(out));

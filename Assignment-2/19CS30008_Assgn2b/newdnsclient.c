@@ -12,7 +12,7 @@
 
 #define MAXN 100        // The maximum size of the file being read
 #define IP_SIZE 20      // The size to store one IP address
-#define PORT 20001      // The port number on which the server will be listening
+#define PORT 20000      // The port number on which the server will be listening
 
 int main()
 {
@@ -48,45 +48,10 @@ int main()
         exit(1);
     }
 
-    // Make the socket non-blocking
-    int args = fcntl(sockfd, F_GETFL);
-    args |= O_NONBLOCK;
-    fcntl(sockfd, F_SETFL, args);
-
-    int ret = connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr));
-    if(ret < 0) {
-        if(errno == EINPROGRESS) {
-            struct timeval tv;
-            tv.tv_sec = 2;
-            tv.tv_usec = 0;
-            fd_set fd;
-            FD_ZERO(&fd);
-            FD_SET(sockfd, &fd);
-            ret = select(sockfd + 1, NULL, &fd, NULL, &tv);
-            if(ret > 0) {
-                socklen_t len = sizeof(int);
-                getsockopt(sockfd, SOL_SOCKET, SO_ERROR, &ret, (socklen_t *) &len);
-                if(ret != 0) {
-                    printf("hi\n");
-                    perror("Unable to connect\n");
-                    exit(1);
-                }
-            }
-            else {
-                printf("\nTimed out in 2 sec - No response from server\n");
-                exit(1);
-            }
-        }
-        else {
-            printf("ho\n");
-            perror("Unable to connect");
-            exit(1);
-        }
+    if(connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
+        perror("Unable to connect to server\n");
+        exit(1);
     }
-
-    // Make the socket blocking again
-    args &= (~O_NONBLOCK);
-    fcntl(sockfd, F_SETFL, args);
 
     send(sockfd, buf, strlen(buf) + 1, 0);
 
@@ -95,7 +60,7 @@ int main()
     memset(temp, 0, sizeof(temp));
 
     int received = 0, ind = 0, end = 0;
-    char prev = 'a';
+    char prev = ' ';
 
     while(!end) {
         memset(temp, 0, sizeof(temp));

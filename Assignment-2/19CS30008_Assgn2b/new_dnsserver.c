@@ -10,26 +10,33 @@
 
 #define MAXN 100            // Maximum size of buffer
 #define IP_SIZE 20          // The size to store one IP address
-#define TCP_PORT 20000      // TCP port number
-#define UDP_PORT 20000      // UDP port number
+#define PORT 20000          // The port number
 
 int max(int a, int b) {
     return ((a > b) ? a : b);
 }
 
 void process_tcp(int new_tcp_sockfd) {
-    char buf[MAXN], out[IP_SIZE];
+    char buf[MAXN], temp[MAXN], out[IP_SIZE];
     memset(buf, 0, sizeof(buf));
+    memset(temp, 0, sizeof(temp));
     memset(out, 0, sizeof(out));
 
-    int n = recv(new_tcp_sockfd, buf, MAXN, 0);
-    if(n < 0) {
-        perror("Unable to read from socket\n");
-        exit(1);
-    }
-    if(n == 0) {
-        printf("Client closed connection\n");
-        return;
+    while(1) {
+        memset(temp, 0, sizeof(temp));
+        int n = recv(new_tcp_sockfd, temp, MAXN, 0);
+        if(n < 0) {
+            perror("Unable to read from socket\n");
+            exit(1);
+        }
+        if(n == 0) {
+            printf("Client closed connection\n");
+            return;
+        }
+        strcat(buf, temp);
+        if(temp[n - 1] == '\0') {
+            break;
+        }
     }
 
     struct hostent *h = gethostbyname(buf);
@@ -109,7 +116,7 @@ void process_udp(int udp_sockfd) {
 int main() 
 {
     int tcp_sockfd, new_tcp_sockfd, udp_sockfd;     // Socket file descriptor
-    struct sockaddr_in tcp_serv_addr, udp_serv_addr;
+    struct sockaddr_in serv_addr;
 
     // Create a TCP socket for the server, a negative return value indicates an error
     if((tcp_sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
@@ -124,25 +131,20 @@ int main()
     }
 
     // Set the struct server address and client address to all zeros
-    memset(&tcp_serv_addr, 0, sizeof(tcp_serv_addr)); 
-    memset(&udp_serv_addr, 0, sizeof(udp_serv_addr));
+    memset(&serv_addr, 0, sizeof(serv_addr)); 
 
-    tcp_serv_addr.sin_family = AF_INET;             // The family is AF_INET for the internet family
-    tcp_serv_addr.sin_addr.s_addr = INADDR_ANY;     // Will accept conectins from any IP address
-    tcp_serv_addr.sin_port = htons(TCP_PORT);       // The port number is converted to network byte order
+    serv_addr.sin_family = AF_INET;             // The family is AF_INET for the internet family
+    serv_addr.sin_addr.s_addr = INADDR_ANY;     // Will accept conectins from any IP address
+    serv_addr.sin_port = htons(PORT);           // The port number is converted to network byte order
 
     // Associate the socket with the correct port using the bind() system call
-    if(bind(tcp_sockfd, (struct sockaddr *) &tcp_serv_addr, sizeof(tcp_serv_addr)) < 0) {
+    if(bind(tcp_sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
         perror("Unable to bind local address\n");
         exit(1);
     }
 
-    udp_serv_addr.sin_family = AF_INET;             // The family is AF_INET for the internet family
-    udp_serv_addr.sin_addr.s_addr = INADDR_ANY;     // Will accept conectins from any IP address
-    udp_serv_addr.sin_port = htons(UDP_PORT);       // The port number is converted to network byte order
-
     // Associate the socket with the correct port using the bind() system call
-    if(bind(udp_sockfd, (struct sockaddr *) &udp_serv_addr, sizeof(udp_serv_addr)) < 0) {
+    if(bind(udp_sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
         perror("Unable to bind local address\n");
         exit(1);
     }
@@ -150,7 +152,6 @@ int main()
     // Specifies that up to 5 concurrent client requests will be queued up while the system is executing the "accept" system call below
     listen(tcp_sockfd, 5);
 
-    // buf stores the input from the client, out is used to send the required output back to the client
     char buf[MAXN], out[IP_SIZE];
     memset(buf, 0, sizeof(buf));
     memset(out, 0, sizeof(out));
@@ -169,7 +170,7 @@ int main()
             exit(1);
         }
 
-        if(FD_ISSET(tcp_sockfd, &fd)) {
+        if(FD_ISSET(tcp_sockfd, &fd)) {     // Data in TCP socket
             struct sockaddr_in cli_addr;
             socklen_t clilen = sizeof(cli_addr);
             memset(&cli_addr, 0, sizeof(cli_addr));
@@ -179,7 +180,7 @@ int main()
                 perror("Unable to accept connection\n");
                 exit(1);
             }
-            if(fork() == 0) {
+            if(fork() == 0) {       // Child process
                 close(tcp_sockfd);
                 close(udp_sockfd);
                 process_tcp(new_tcp_sockfd);
@@ -189,7 +190,7 @@ int main()
             close(new_tcp_sockfd);
         }
 
-        if(FD_ISSET(udp_sockfd, &fd)) {
+        if(FD_ISSET(udp_sockfd, &fd)) {     // Data in UDP socket
             process_udp(udp_sockfd);
         }
     }
