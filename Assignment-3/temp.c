@@ -16,8 +16,8 @@ int main()
 	// using the command
 	int changed = chdir("/home/vanshita/Desktop");
 	printf("chenged = %d\n", changed);
-	int fd = open("p.txt", O_RDWR | O_CREAT | O_EXCL);
-	printf("%ddfkhuds\n", fd);
+	int fd = open("P.txt", O_RDWR|O_CREAT,S_IRUSR|S_IWUSR|S_IXUSR);
+	printf("%d\n", fd);
 	// printing current working directory
 	printf("%s\n", getcwd(s, 100));
 	close(fd);
