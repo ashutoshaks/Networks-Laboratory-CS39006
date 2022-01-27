@@ -36,18 +36,28 @@ void log_print(FILE* fp, const char* fmt, ...) {
 // void initLogger(const char*);
 // void log_print(FILE*, const char*, ...);
 
-#define __LOG_COLOR(FD, CLR, CTX, TXT, args...) log_print(FD, "\033[%sm[%s] \033[0m" TXT, CLR, CTX, ##args)
-// #define SUCCESS(TXT, args...) __LOG_COLOR(stdout, _COLOR_CYAN, "info", TXT, ##args)
-// #define ERROR(TXT, args...) __LOG_COLOR(stderr, _COLOR_RED, "error", TXT, ##args)
-// #define PROMPT(TXT, args...) __LOG_COLOR(stdout, _COLOR_GREEN, "", TXT, ##args)
-// #define DEBUG(TXT, args...) __LOG_COLOR(stdout, _COLOR_BLUE, "debug", TXT, ##args)
+// #define __LOG_COLOR(FD, CLR, CTX, TXT, args...) log_print(FD, "\033[%sm[%s] \033[0m" TXT, CLR, CTX, ##args)
+// #define __LOG_COLOR(FD, CLR, CTX, TXT, args...) log_print(FD, "\033[%sm[%s] \033[0m" TXT, CLR, CTX, ##args)
+// #define __LOG_COLOR(FD, CLR, CTX, TXT, args...) printf("\033[%sm[%s] : "#TXT" \033[m\n",CLR,CTX,##args)
+// #define SUCCESS(TXT, args...) __LOG_COLOR(stdout, _COLOR_CYAN, "INFO", TXT, ##args)
+// #define ERROR(TXT, args...) __LOG_COLOR(stderr, _COLOR_RED, "ERROR", TXT, ##args)
+// #define DEBUG(TXT, args...) __LOG_COLOR(stdout, _COLOR_BLUE, "DEBUG", TXT, ##args)
+
+#define ERROR(msg, ...) printf("\033[1;31m[ERROR] "msg" \033[0m\n", ##__VA_ARGS__);
+#define SUCCESS(msg, ...) printf("\033[1;36m[INFO] "msg" \033[0m\n", ##__VA_ARGS__);
+#define DEBUG(msg, ...) printf("\033[1;34m[DEBUG] "msg" \033[0m\n", ##__VA_ARGS__);
+#define PROMPT(msg, ...) printf("\033[1;32m"msg" \033[0m", ##__VA_ARGS__);
 
 
-#define SUCCESS(str) printf(CYAN str RESET);
-#define ERROR(str) printf(RED str RESET);   // use this for status code error
-#define PROMPT(str) printf(GREEN str RESET);
-#define DEBUG(str) printf(BLUE str RESET);
-#define DEBUG(str1, str2) printf(BLUE str1, str2 RESET);
+
+
+
+
+// #define SUCCESS(str) printf(CYAN str RESET);
+// #define ERROR(str) printf(RED str RESET);   // use this for status code error
+// #define PROMPT(str) printf(GREEN str RESET);
+// #define DEBUG(str) printf(BLUE str RESET);
+// #define DEBUG(str1, str2) printf(BLUE str1, str2 RESET);
 
 
 int main()
@@ -68,7 +78,7 @@ int main()
     // // after chdir is executed
     // return 0;
 
-    DEBUG("%s", "hello\n");
+    ERROR("myFTP> ");
 }
 
 
