@@ -20,7 +20,7 @@
 #define PROMPT(msg, ...) printf("\033[1;32m"msg"\033[0m", ##__VA_ARGS__);
 
 #define COMMAND_SIZE 1000
-#define MAX_SIZE 1000
+#define MAX_SIZE 10000
 
 const char* code_200 = "200";
 const char* code_500 = "500";
@@ -45,12 +45,14 @@ void sendFile(int sockfd, int fd) {
         } else {
             buf[0] = 'L';
         }
-        memcpy(buf + 1, &n, 2);
+        short t = htons(n);
+        memcpy(buf + 1, &t, 2);
         memcpy(buf + 3, file_buf, n);
 
         send(sockfd, buf, n + 3, 0);
         len += n;
     } while (len < file_size);
+    // DEBUG("bahar aaya sendfile");
 }
 
 void recvFile(int sockfd, int fd) {
@@ -62,7 +64,9 @@ void recvFile(int sockfd, int fd) {
     char temp_len[2];
     int done = 0;
     do {
-        int n = recv(sockfd, buf, MAX_SIZE, 0);
+        int sz = (rem > 0 ? rem : 1);
+        sz = (sz < MAX_SIZE ? sz : MAX_SIZE);
+        int n = recv(sockfd, buf, sz, 0);
         DEBUG("Received %d bytes", n);
         for (int i = 0; i < n; i++) {
             if (type) {
@@ -76,13 +80,19 @@ void recvFile(int sockfd, int fd) {
                 temp_len[1] = buf[i];
                 len = 0;
                 // data = 1;
+                // DEBUG("left: %d", (int)temp_len[0]);
+                // DEBUG("right: %d", (int)temp_len[1]);
                 rem = ntohs(*(short*)temp_len);
+                // DEBUG("Remaining: %d", rem);
             } else {
                 int can_write = ((rem < n - i) ? rem : n - i);
                 write(fd, buf + i, can_write);
                 DEBUG("Wrote %d bytes", can_write);
                 rem -= can_write;
                 i += can_write - 1;
+                // DEBUG("Can write: %d", can_write);
+                // DEBUG("Remaining: %d", rem);
+                // DEBUG("type: %c", curr_type);
                 if (rem == 0) {
                     if (curr_type == 'L') {
                         done = 1;
@@ -101,7 +111,9 @@ int receive(int sockfd, char* buf, int SIZE, char delim) {
     int tot = 0;
     while(1) {
         memset(temp, 0, sizeof(temp));
+        // DEBUG("idhar...");
         int n = recv(sockfd, temp, 1, 0);
+        // DEBUG("udhar...");
         if(n < 0) {
             ERROR("Unable to read from socket");
             exit(1);
@@ -111,10 +123,10 @@ int receive(int sockfd, char* buf, int SIZE, char delim) {
             break;
         }
         strcat(buf, temp);
+        tot += n;
         if(temp[n - 1] == delim) {
             break;
         }
-        tot += n;
     }
     DEBUG("Buffer: %s", buf);
     return tot;

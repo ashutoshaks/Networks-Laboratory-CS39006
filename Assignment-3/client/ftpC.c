@@ -5,7 +5,7 @@ int authenticated = 0;
 int args = 0;
 
 
-char** parseCommand (char* command) {
+char** parseCommand(char* command, int* num) {
     for (int i = 0; i < strlen(command); i++) {
         if (command[i] == ',') {
             command[i] = ' ';
@@ -22,6 +22,8 @@ char** parseCommand (char* command) {
         } 
     }
 
+    *num = cnt;
+
     char** cmd = (char**) malloc(cnt * sizeof(char*));
     i = 0, cnt = 0;
     char buf[100];
@@ -37,10 +39,13 @@ char** parseCommand (char* command) {
             i++;
         } 
     }
+    // DEBUG("cmd[0]: %s, %d", cmd[0], (int)strlen(cmd[0]));
+    // DEBUG("cmd[1]: %s, %d", cmd[1], (int)strlen(cmd[1]));
+    // DEBUG("command: %s, %d", command, (int)strlen(command));
     return cmd;
 }
 
-int _open (char** cmd) {
+int _open(char** cmd) {
     int PORT = atoi(cmd[2]);
     if (PORT < 20000 || PORT > 65535) {
         ERROR("Enter valid port no. (between 20000 and 65535)");
@@ -76,10 +81,12 @@ int _open (char** cmd) {
     return sockfd;
 }
 
-void _user (int sockfd, char* command) {
-    send(sockfd, command, sizeof(command) + 1, 0);
+void _user(int sockfd, char* command) {
+    int n = send(sockfd, command, strlen(command) + 1, 0);
+    // DEBUG("Sent %d bytes", n);
     char code[5];
-    receive(sockfd, code, 5, '\0');
+    n = receive(sockfd, code, 5, '\0');
+    DEBUG("Received %d bytes", n);
     if (!strcmp(code_200, code)) {
         SUCCESS("%s, Command executed successfully", code);
     } else {
@@ -87,8 +94,8 @@ void _user (int sockfd, char* command) {
     }
 } 
 
-void _pass (int sockfd, char* command) {
-    send(sockfd, command, sizeof(command) + 1, 0);
+void _pass(int sockfd, char* command) {
+    send(sockfd, command, strlen(command) + 1, 0);
     char code[5];
     receive(sockfd, code, 5, '\0');
     if (!strcmp(code_200, code)) {
@@ -99,8 +106,8 @@ void _pass (int sockfd, char* command) {
     }
 }
 
-void _cd (int sockfd, char* command) {
-    send(sockfd, command, sizeof(command)+1, 0);
+void _cd(int sockfd, char* command) {
+    send(sockfd, command, strlen(command)+1, 0);
     char code[5];
     receive(sockfd, code, 5, '\0');
     if (!strcmp(code_200, code)) {
@@ -110,16 +117,16 @@ void _cd (int sockfd, char* command) {
     }
 }
 
-void _lcd (char** cmd) {
+void _lcd(char** cmd) {
     if (chdir(cmd[1]) == 0) {
         DEBUG("Directory changed");
     } else {
-        ERROR("Directory could not not changed");
+        ERROR("Directory could not changed");
     }
 }
 
-void _dir (int sockfd, char* command) {
-    send(sockfd, command, sizeof(command)+1, 0);
+void _dir(int sockfd, char* command) {
+    send(sockfd, command, strlen(command)+1, 0);
     char content[MAX_SIZE], temp[MAX_SIZE];
     memset(content, '\0', sizeof(content));
     int ind = 0, end = 0;
@@ -147,7 +154,7 @@ void _dir (int sockfd, char* command) {
     }
 }
 
-int _get (int sockfd, char** cmd, char* command) {
+int _get(int sockfd, char** cmd, char* command) {
     if(cmd[1][0] == '.') {
         ERROR("Remote filename cannot begin with dot");
         return -1;
@@ -174,7 +181,7 @@ int _get (int sockfd, char** cmd, char* command) {
     return 1;
 }
 
-int _put (int sockfd, char** cmd, char* command) {
+int _put(int sockfd, char** cmd, char* command) {
     if(cmd[1][0] == '.') {
         ERROR("Local filename cannot begin with dot");
         return -1;
@@ -184,7 +191,7 @@ int _put (int sockfd, char** cmd, char* command) {
         return -1;
     }
 
-    int fd = open(cmd[2], O_RDONLY);
+    int fd = open(cmd[1], O_RDONLY);
     if (fd < 0) {
         ERROR("Unable to open file");
         return -1;
@@ -201,12 +208,15 @@ int _put (int sockfd, char** cmd, char* command) {
     return 1;
 }
 
-void _mget (int sockfd, char** cmd) {
+void _mget(int sockfd, char** cmd) {
+    DEBUG("%d", args);
     for (int i = 1; i < args; i++) {
         char temp_command[COMMAND_SIZE];
         memset(temp_command, '\0', sizeof(temp_command));
         sprintf(temp_command, "get %s %s", cmd[i], cmd[i]);
-        char** temp_cmd = parseCommand(temp_command);
+        DEBUG("%s", temp_command);
+        int n;
+        char** temp_cmd = parseCommand(temp_command, &n);
         if (_get(sockfd, temp_cmd, temp_command) < 0) {
             ERROR("Failed at index %d", i);
             break;
@@ -215,13 +225,16 @@ void _mget (int sockfd, char** cmd) {
     return;
 }
 
-void _mput (int sockfd, char** cmd) {
+void _mput(int sockfd, char** cmd) {
+    DEBUG("%d", args);
     for (int i = 1; i < args; i++) {
         char temp_command[COMMAND_SIZE];
         memset(temp_command, '\0', sizeof(temp_command));
         sprintf(temp_command, "put %s %s", cmd[i], cmd[i]);
-        char** temp_cmd = parseCommand(temp_command);
-        if (_get(sockfd, temp_cmd, temp_command) < 0) {
+        DEBUG("%s", temp_command);
+        int n;
+        char** temp_cmd = parseCommand(temp_command, &n);
+        if (_put(sockfd, temp_cmd, temp_command) < 0) {
             ERROR("Failed at index %d", i);
             break;
         }
@@ -229,7 +242,7 @@ void _mput (int sockfd, char** cmd) {
     return;
 }
 
-void _quit (int sockfd) {
+void _quit(int sockfd) {
     if (connection_open) {
         close(sockfd);
     }
@@ -248,7 +261,7 @@ int main () {
         fgets(command, COMMAND_SIZE, stdin);
         command[strlen(command) - 1] = '\0';
 
-        char** cmd = parseCommand(command);
+        char** cmd = parseCommand(command, &args);
 
         if (!cmd[0]) {
             continue;

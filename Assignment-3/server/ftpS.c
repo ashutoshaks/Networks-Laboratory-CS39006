@@ -6,14 +6,6 @@ char* usernames[100];
 char* passwords[100];
 int numUsers;
 
-// functions
-// _user
-// _pass
-// _cd
-// _dir
-// _get
-// _put
-
 void _user(int sockfd, char** cmd, int* uind) {
     for (int i = 0; i < numUsers; i++) {
         if (!strcmp(cmd[1], usernames[i])) {
@@ -34,6 +26,8 @@ void _pass(int sockfd, char** cmd, int* uind, int* authenticated) {
         *authenticated = 1;
         send(sockfd, code_200, strlen(code_200) + 1, 0);
         return;
+    } else {
+        *uind = -1;
     }
     DEBUG("Password did not match");
     send(sockfd, code_500, strlen(code_500) + 1, 0);
