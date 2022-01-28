@@ -15,7 +15,16 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 
+void func (char* str) {
+    str[0] = 'a'; str[1] = 'b';
+    // printf("%s\n", str);
+}
+
 int main()
 {
-  
+    char str[5];
+    scanf("%s", str);
+    func(str);
+    printf("%s\n", str);
+    return 0;
 }

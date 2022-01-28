@@ -14,7 +14,7 @@ int numUsers;
 // _get
 // _put
 
-void _user(char** cmd, int sockfd, int* uind) {
+void _user(int sockfd, char** cmd, int* uind) {
     for (int i = 0; i < numUsers; i++) {
         if (!strcmp(cmd[1], usernames[i])) {
             *uind = i;
@@ -28,10 +28,10 @@ void _user(char** cmd, int sockfd, int* uind) {
 }
 
 
-void _pass(char** cmd, int sockfd, int* uind, int* authenticated) {
+void _pass(int sockfd, char** cmd, int* uind, int* authenticated) {
     if (!strcmp(cmd[1], passwords[*uind])) {
         DEBUG("Password matched");
-        authenticated = 1;
+        *authenticated = 1;
         send(sockfd, code_200, strlen(code_200) + 1, 0);
         return;
     }
@@ -40,9 +40,10 @@ void _pass(char** cmd, int sockfd, int* uind, int* authenticated) {
 }
 
 
-void _cd(char** cmd, int sockfd) {
+void _cd(int sockfd, char** cmd) {
     if (chdir(cmd[1]) == 0) {
-        DEBUG("Directory changed");
+        char s[100];
+        DEBUG("Directory changed: %s", getcwd(s, 100));
         send(sockfd, code_200, strlen(code_200) + 1, 0);
     } else {
         ERROR("Directory could not not changed");
@@ -51,7 +52,9 @@ void _cd(char** cmd, int sockfd) {
 }
 
 
-void _dir(char** cmd, int sockfd) {
+void _dir(int sockfd, char** cmd) {
+    char s[100];
+    DEBUG("Current directory: %s", getcwd(s, 100));
     DIR* dir = opendir(".");
     if (dir) {
         DEBUG("Starting directory listing");
@@ -64,6 +67,43 @@ void _dir(char** cmd, int sockfd) {
     } else {
         ERROR("Directory could not be opened");
     }
+}
+
+void _get(int sockfd, char** cmd) {
+    if(cmd[1][0] == '.') {
+        ERROR("Filename cannot begin with dot");
+        send(sockfd, code_500, strlen(code_500) + 1, 0);
+        return;
+    }
+
+    int fd = open(cmd[1], O_RDONLY);
+    if (fd < 0) {
+        ERROR("File could not be opened");
+        send(sockfd, code_500, strlen(code_500) + 1, 0);
+        return;
+    }
+    send(sockfd, code_200, strlen(code_200) + 1, 0);
+    sendFile(sockfd, fd);
+    close(fd);
+}
+
+
+void _put(int sockfd, char** cmd) {
+    if(cmd[2][0] == '.') {
+        ERROR("Filename cannot begin with dot");
+        send(sockfd, code_500, strlen(code_500) + 1, 0);
+        return;
+    }
+
+    int fd = open(cmd[2], O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR);
+    if (fd < 0) {
+        ERROR("File could not be opened");
+        send(sockfd, code_500, strlen(code_500) + 1, 0);
+        return;
+    }
+    send(sockfd, code_200, strlen(code_200) + 1, 0);
+    recvFile(sockfd, fd);
+    close(fd);
 }
 
 void parseUsers() {
@@ -129,54 +169,22 @@ char** parseCommand(char* command) {
 }
 
 
-void _get(char** cmd, int sockfd) {
-    if(cmd[1][0] == '.') {
-        ERROR("Filename cannot begin with dot");
-        send(sockfd, code_500, strlen(code_500) + 1, 0);
-        return;
-    }
-
-    int fd = open(cmd[1], O_RDONLY);
-    if (fd < 0) {
-        ERROR("File could not be opened");
-        send(sockfd, code_500, strlen(code_500) + 1, 0);
-        return;
-    }
-    send(sockfd, code_200, strlen(code_200) + 1, 0);
-    sendFile(sockfd, fd);
-    close(fd);
-}
-
-
-void _put(char** cmd, int sockfd) {
-    if(cmd[2][0] == '.') {
-        ERROR("Filename cannot begin with dot");
-        send(sockfd, code_500, strlen(code_500) + 1, 0);
-        return;
-    }
-
-    int fd = open(cmd[2], O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR);
-    if (fd < 0) {
-        ERROR("File could not be opened");
-        send(sockfd, code_500, strlen(code_500) + 1, 0);
-        return;
-    }
-    send(sockfd, code_200, strlen(code_200) + 1, 0);
-    recvFile(sockfd, fd);
-    close(fd);
-}
-
-
 int main () {
     int sockfd, newsockfd;
     struct sockaddr_in serv_addr, cli_addr;
     int clilen = sizeof(cli_addr);
+    int opt = 1;
 
     parseUsers();
 
     if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         ERROR("Cannot create socket");
         exit(1);
+    }
+
+    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) {
+        perror("setsockopt");
+        exit(EXIT_FAILURE);
     }
 
     serv_addr.sin_family = AF_INET;
@@ -191,7 +199,7 @@ int main () {
     listen(sockfd, 5);
 
     while (1) {
-        if ((newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen)) < 0) {
+        if ((newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, (socklen_t *) &clilen)) < 0) {
             ERROR("Unable to accept connection");
             exit(1);
         }
@@ -203,10 +211,13 @@ int main () {
             int uind = -1;
             int authenticated = 0;
 
+            DEBUG("Child process started");
+
             while (1) {
-                // receieve a command from client
+                // receive a command from client
                 char command[COMMAND_SIZE];
-                int n = recieve(newsockfd, command, COMMAND_SIZE, '\0');
+                int n = receive(newsockfd, command, COMMAND_SIZE, '\0');
+                DEBUG("Command received: %s", command);
                 if (n == 0) {
                     DEBUG("Client disconnected");
                     break;
@@ -230,23 +241,23 @@ int main () {
                     continue;
                 }
 
-                if(cmd[0] != "user" && cmd[0] != "pass" && !authenticated) {
+                if(strcmp(cmd[0], "user") && strcmp(cmd[0], "pass") && !authenticated) {
                     ERROR("User not authenticated");
                     continue;
                 }
 
                 if (!strcmp(cmd[0], "user")) {
-                    _user(cmd, newsockfd, &uind);
+                    _user(newsockfd, cmd, &uind);
                 } else if (!strcmp(cmd[0], "pass")) {
-                    _pass(cmd, newsockfd, &uind, &authenticated);
+                    _pass(newsockfd, cmd, &uind, &authenticated);
                 } else if (!strcmp(cmd[0], "cd")) {
-                    _cd(cmd, newsockfd);
+                    _cd(newsockfd, cmd);
                 } else if (!strcmp(cmd[0], "dir")) {
-                    _dir(cmd, newsockfd);
+                    _dir(newsockfd, cmd);
                 } else if (!strcmp(cmd[0], "get")) {
-                    _get(cmd, newsockfd);
+                    _get(newsockfd, cmd);
                 } else if (!strcmp(cmd[0], "put")) {
-                    _put(cmd, newsockfd);
+                    _put(newsockfd, cmd);
                 } else {
                     ERROR("Unrecognized command");
                 }
@@ -264,5 +275,3 @@ int main () {
     close(sockfd);
     return 0;
 }
-
-// recieve(sockfd, buff, MAXN, '\0');
