@@ -21,6 +21,10 @@
 const int COMMAND_SIZE = 1000;
 const int MAX_SIZE = 1000;
 
+const char* code_200 = "200";
+const char* code_500 = "500";
+const char* code_600 = "600";
+
 int isAuthenticated() {
 
 }
