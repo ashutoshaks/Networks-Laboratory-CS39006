@@ -1,84 +1,66 @@
 #include <stdio.h>
 #include <stdarg.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>  
+#include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h> 
+#include <sys/stat.h>
+#include <sys/wait.h>
+#include <sys/select.h>
+#include <fcntl.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
 
-#define RED "\033[1;31m"
-#define GREEN "\033[1;32m"
-#define YELLOW "\033[1;33m"
-#define BLUE "\033[1;34m"
-#define MAGENTA "\033[1;35m"
-#define CYAN "\033[1;36m"
-#define WHITE "\033[1;37m" 
-#define RESET "\033[0m"
+char* usernames[100];
+char* passwords[100];
+int numUsers;
 
-#define _COLOR_CYAN "1;36"
-#define _COLOR_RED "1;31"
-#define _COLOR_BLUE "1;34"
-#define _COLOR_GREEN "0;32"
 
-FILE* _logFp = NULL;
-void initLogger(const char* logFile) {
-    _logFp = logFile ? fopen(logFile, "w") : stdout;
+void parseUsers() {
+    FILE* fp = fopen("server/user.txt", "r");
+    if (fp == NULL) {
+        // ERROR("Unable to open user.txt");
+        exit(1);
+    }
+    char* line = NULL;
+    size_t len = 0;
+    ssize_t read;
+
+    // memset(usernames, 0, sizeof(usernames));
+    // memset(passwords, 0, sizeof(passwords));
+
+    numUsers = 0;
+    while ((read = getline(&line, &len, fp)) != -1) {
+        if(line[strlen(line) - 1] == '\n') {
+            line[strlen(line) - 1] = '\0';
+        }
+        // printf("%s", line);
+        char* user = strtok(line, " ");
+        char* pass = strtok(NULL, " ");
+        // printf("%s %s %d\n", user, pass, numUsers);
+        usernames[numUsers] = (char*) malloc((strlen(user) + 1) * sizeof(char));
+        passwords[numUsers] = (char*) malloc((strlen(pass) + 1) * sizeof(char));
+        strcpy(usernames[numUsers], user);
+        strcpy(passwords[numUsers], pass);
+        usernames[numUsers] = user;
+        passwords[numUsers] = pass;
+        printf("%s %s %d\n", usernames[numUsers], passwords[numUsers], numUsers);
+        numUsers++;
+    }
+    printf("%s %s\n", usernames[0], passwords[0]);
+    printf("%s %s\n", usernames[1], passwords[1]);
+
+    // for(int i = 0; i < numUsers; i++) {
+    //     printf("%s %s\n", usernames[i], passwords[i]);
+    // }
+    fclose(fp);
 }
-
-void log_print(FILE* fp, const char* fmt, ...) {
-    if (_logFp != NULL)
-        fp = _logFp;
-    va_list args;
-    va_start(args, fmt);
-    vfprintf(fp, fmt, args);
-    fflush(fp);
-    va_end(args);
-}
-// void initLogger(const char*);
-// void log_print(FILE*, const char*, ...);
-
-// #define __LOG_COLOR(FD, CLR, CTX, TXT, args...) log_print(FD, "\033[%sm[%s] \033[0m" TXT, CLR, CTX, ##args)
-// #define __LOG_COLOR(FD, CLR, CTX, TXT, args...) log_print(FD, "\033[%sm[%s] \033[0m" TXT, CLR, CTX, ##args)
-// #define __LOG_COLOR(FD, CLR, CTX, TXT, args...) printf("\033[%sm[%s] : "#TXT" \033[m\n",CLR,CTX,##args)
-// #define SUCCESS(TXT, args...) __LOG_COLOR(stdout, _COLOR_CYAN, "INFO", TXT, ##args)
-// #define ERROR(TXT, args...) __LOG_COLOR(stderr, _COLOR_RED, "ERROR", TXT, ##args)
-// #define DEBUG(TXT, args...) __LOG_COLOR(stdout, _COLOR_BLUE, "DEBUG", TXT, ##args)
-
-#define ERROR(msg, ...) printf("\033[1;31m[ERROR] "msg" \033[0m\n", ##__VA_ARGS__);
-#define SUCCESS(msg, ...) printf("\033[1;36m[INFO] "msg" \033[0m\n", ##__VA_ARGS__);
-#define DEBUG(msg, ...) printf("\033[1;34m[DEBUG] "msg" \033[0m\n", ##__VA_ARGS__);
-#define PROMPT(msg, ...) printf("\033[1;32m"msg" \033[0m", ##__VA_ARGS__);
-
-
-
-
-
-
-// #define SUCCESS(str) printf(CYAN str RESET);
-// #define ERROR(str) printf(RED str RESET);   // use this for status code error
-// #define PROMPT(str) printf(GREEN str RESET);
-// #define DEBUG(str) printf(BLUE str RESET);
-// #define DEBUG(str1, str2) printf(BLUE str1, str2 RESET);
-
 
 int main()
 {
-    // char s[100];
-
-    // // printing current working directory
-    // printf("%s\n", getcwd(s, 100));
-
-    // // using the command
-    // int changed = chdir("/home/vanshita/Desktop");
-    // printf("chenged = %d\n", changed);
-    // int fd = open("P.txt", O_RDWR|O_CREAT,S_IRUSR|S_IWUSR|S_IXUSR);
-    // printf("%d\n", fd);
-    // // printing current working directory
-    // printf("%s\n", getcwd(s, 100));
-    // close(fd);
-    // // after chdir is executed
-    // return 0;
-
-    ERROR("myFTP> ");
+    parseUsers();
 }
 
 
