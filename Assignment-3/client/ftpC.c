@@ -1,4 +1,138 @@
-#include "../header.h"
+#include <stdio.h>
+#include <stdarg.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h> 
+#include <sys/stat.h>
+#include <sys/wait.h>
+#include <sys/select.h>
+#include <fcntl.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <dirent.h>
+
+#define ERROR(msg, ...) printf("\033[1;31m[ERROR] "msg" \033[0m\n", ##__VA_ARGS__);
+#define SUCCESS(msg, ...) printf("\033[1;36m[INFO] "msg" \033[0m\n", ##__VA_ARGS__);
+#define DEBUG(msg, ...) printf("\033[1;34m[DEBUG] "msg" \033[0m\n", ##__VA_ARGS__);
+#define PROMPT(msg, ...) printf("\033[1;32m"msg"\033[0m", ##__VA_ARGS__);
+#define COMMAND_SIZE 1000
+#define MAX_SIZE 10000
+
+const char* code_200 = "200";
+const char* code_500 = "500";
+const char* code_600 = "600";
+
+void sendFile(int sockfd, int fd) {
+    struct stat st;
+    fstat(fd, &st);
+    long int file_size = st.st_size;
+
+    // DEBUG("File size: %ld", file_size);
+
+    long int len = 0;
+    int sz = MAX_SIZE - 3;
+    char buf[MAX_SIZE];
+    char file_buf[sz];
+    do {
+        short n = read(fd, file_buf, sz);
+        DEBUG("Read %d bytes", n);
+        if (len + n < file_size) {
+            buf[0] = 'M';
+        } else {
+            buf[0] = 'L';
+        }
+        short t = htons(n);
+        memcpy(buf + 1, &t, 2);
+        memcpy(buf + 3, file_buf, n);
+
+        send(sockfd, buf, n + 3, 0);
+        len += n;
+    } while (len < file_size);
+    // DEBUG("bahar aaya sendfile");
+}
+
+void recvFile(int sockfd, int fd) {
+    char buf[MAX_SIZE];
+    short rem = 0;
+    int type = 1, len = 0;
+    // int data = 0;
+    char curr_type;
+    char temp_len[2];
+    int done = 0;
+    do {
+        int sz = (rem > 0 ? rem : 1);
+        sz = (sz < MAX_SIZE ? sz : MAX_SIZE);
+        int n = recv(sockfd, buf, sz, 0);
+        // DEBUG("Received %d bytes", n);
+        for (int i = 0; i < n; i++) {
+            if (type) {
+                curr_type = buf[i];
+                type = 0; len = 1;
+                // data = 0;
+            } else if (len == 1) {
+                temp_len[0] = buf[i];
+                len = 2;
+            } else if (len == 2) {
+                temp_len[1] = buf[i];
+                len = 0;
+                // data = 1;
+                // DEBUG("left: %d", (int)temp_len[0]);
+                // DEBUG("right: %d", (int)temp_len[1]);
+                rem = ntohs(*(short*)temp_len);
+                // DEBUG("Remaining: %d", rem);
+                if (!rem) {
+                    done = 1;
+                }
+            } else {
+                int can_write = ((rem < n - i) ? rem : n - i);
+                write(fd, buf + i, can_write);
+                // DEBUG("Wrote %d bytes", can_write);
+                rem -= can_write;
+                i += can_write - 1;
+                // DEBUG("Can write: %d", can_write);
+                // DEBUG("Remaining: %d", rem);
+                // DEBUG("type: %c", curr_type);
+                if (rem == 0) {
+                    if (curr_type == 'L') {
+                        done = 1;
+                    }
+                    type = 1;
+                    // data = 0;
+                }
+            }
+        }
+    } while (!done);
+}
+
+int receive(int sockfd, char* buf, int SIZE, char delim) {
+    memset(buf, 0, SIZE);
+    char temp[1];
+    int tot = 0;
+    while(1) {
+        memset(temp, 0, sizeof(temp));
+        // DEBUG("idhar...");
+        int n = recv(sockfd, temp, 1, 0);
+        // DEBUG("udhar...");
+        if(n < 0) {
+            ERROR("Unable to read from socket");
+            exit(1);
+        }
+        if(n == 0) {
+            ERROR("Client closed connection");
+            break;
+        }
+        strcat(buf, temp);
+        tot += n;
+        if(temp[n - 1] == delim) {
+            break;
+        }
+    }
+    // DEBUG("Buffer: %s", buf);
+    return tot;
+}
 
 int connection_open = 0;
 int authenticated = 0;
@@ -86,7 +220,7 @@ void _user(int sockfd, char* command) {
     // DEBUG("Sent %d bytes", n);
     char code[5];
     n = receive(sockfd, code, 5, '\0');
-    DEBUG("Received %d bytes", n);
+    // DEBUG("Received %d bytes", n);
     if (!strcmp(code_200, code)) {
         SUCCESS("%s, Command executed successfully", code);
     } else {
@@ -119,7 +253,7 @@ void _cd(int sockfd, char* command) {
 
 void _lcd(char** cmd) {
     if (chdir(cmd[1]) == 0) {
-        DEBUG("Directory changed");
+        SUCCESS("Directory changed");
     } else {
         ERROR("Directory could not changed");
     }
@@ -209,16 +343,16 @@ int _put(int sockfd, char** cmd, char* command) {
 }
 
 void _mget(int sockfd, char** cmd) {
-    DEBUG("%d", args);
+    // DEBUG("%d", args);
     for (int i = 1; i < args; i++) {
         char temp_command[COMMAND_SIZE];
         memset(temp_command, '\0', sizeof(temp_command));
         sprintf(temp_command, "get %s %s", cmd[i], cmd[i]);
-        DEBUG("%s", temp_command);
+        // DEBUG("%s", temp_command);
         int n;
         char** temp_cmd = parseCommand(temp_command, &n);
         if (_get(sockfd, temp_cmd, temp_command) < 0) {
-            ERROR("Failed at index %d", i);
+            // ERROR("Failed at index %d", i);
             break;
         }
     }
@@ -226,16 +360,16 @@ void _mget(int sockfd, char** cmd) {
 }
 
 void _mput(int sockfd, char** cmd) {
-    DEBUG("%d", args);
+    // DEBUG("%d", args);
     for (int i = 1; i < args; i++) {
         char temp_command[COMMAND_SIZE];
         memset(temp_command, '\0', sizeof(temp_command));
         sprintf(temp_command, "put %s %s", cmd[i], cmd[i]);
-        DEBUG("%s", temp_command);
+        // DEBUG("%s", temp_command);
         int n;
         char** temp_cmd = parseCommand(temp_command, &n);
         if (_put(sockfd, temp_cmd, temp_command) < 0) {
-            ERROR("Failed at index %d", i);
+            // ERROR("Failed at index %d", i);
             break;
         }
     }
@@ -298,7 +432,7 @@ int main () {
         } else if (!strcmp(cmd[0], "quit")) {
             _quit(sockfd);
         } else {
-            ERROR("Unrecognized command");
+            // ERROR("Unrecognized command");
         }
     }
     return 0;
