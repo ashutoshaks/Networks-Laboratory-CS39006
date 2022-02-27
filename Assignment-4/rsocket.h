@@ -6,12 +6,13 @@
 
 #define ERROR(msg, ...) printf("\033[1;31m[ERROR] " msg " \033[0m\n", ##__VA_ARGS__);
 #define SUCCESS(msg, ...) printf("\033[1;36m[SUCCESS] " msg " \033[0m\n", ##__VA_ARGS__);
-#define INFO(msg, ...) printf("\033[1;34m[INFO] " msg " \033[0m\n", ##__VA_ARGS__);
+#define DEBUG(msg, ...) printf("\033[1;34m[DEBUG] " msg " \033[0m\n", ##__VA_ARGS__);
 #define PROMPT(msg, ...) printf("\033[1;32m" msg "\033[0m", ##__VA_ARGS__);
 
 #define SOCK_MRP 15
 #define T 2
 #define P 0.05
+#define TIMEOUT (2 * T)
 
 /*
     r_socket, r_bind, r_sendto, r_recvfrom, r_close
