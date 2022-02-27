@@ -19,7 +19,7 @@
 
 #define TYPE_SIZE sizeof(char)
 #define MSG_ID_SIZE sizeof(short)
-#define MAX_MSG_SIZE 1000
+#define MAX_MSG_SIZE 200
 #define MAX_FRAME_SIZE (TYPE_SIZE + MSG_ID_SIZE + MAX_MSG_SIZE)
 
 #define MAX_TBL_SIZE 100
@@ -72,6 +72,7 @@ int r_socket(int domain, int type, int protocol) {
     Open a UDP socket
     Create threads R and S
     Allocate space for the 2 tables
+    Initialize all char ptrs to NULL
     */
 }
 
@@ -102,8 +103,11 @@ int r_close(int fd) {
     /*
     close the socket
     kill threads R and S
-    free the tables
+    free the tables (first free all char ptrs)
     */
+}
+
+int dropMessage(float p) {
 }
 
 /*
@@ -113,6 +117,11 @@ wait for message by calling recvfrom (this will get a frame)
 if data message, call dropMessage, accordingly add to received-message table and send ack
 for sending ack DON'T call r_sendto
 if ack message, delete from unacknowledged-message table
+
+char buf[MAX_FRAME_SIZE];
+ssize_t n = recv_from(sockfd, buf, MAX_FRAME_SIZE, 0, src_addr, addrlen);
+free(table_entry_ptr);
+table_entry_ptr = (char*)malloc(n * sizeof(char));
 */
 
 /*
