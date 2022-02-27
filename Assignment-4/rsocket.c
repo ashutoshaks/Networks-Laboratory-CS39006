@@ -19,6 +19,9 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#define ACK_TYPE 'A'
+#define DATA_TYPE 'D'
+
 #define TYPE_SIZE sizeof(char)
 #define MSG_ID_SIZE sizeof(short)
 #define MAX_MSG_SIZE 200
@@ -34,6 +37,7 @@ arbitary no. of bytes - msg
 */
 
 short msg_cntr = 0;
+pthread_t tid_R, tid_S;
 
 typedef struct _recvd_table_entry {
     short msg_id;
@@ -102,6 +106,16 @@ size_t dequeue_recvd_table(void *buf, size_t len, struct sockaddr *src_addr,
     return copy_len;
 }
 
+void free_recvd_table() {
+    for (int i = 0; i < MAX_TBL_SIZE; i++) {
+        if (recvd_msg_tbl->messages[i] != NULL) {
+            free(recvd_msg_tbl->messages[i]->msg);
+            free(recvd_msg_tbl->messages[i]);
+        }
+    }
+    free(recvd_msg_tbl);
+}
+
 typedef struct _unackd_table_entry {
     int msg_id;
     char *msg;
@@ -110,7 +124,6 @@ typedef struct _unackd_table_entry {
     struct sockaddr dest_addr;
     socklen_t addrlen;
     struct timeval sent_time;
-    // short is_empty;
 } unackd_table_entry;
 
 typedef struct _unackd_table {
@@ -159,6 +172,16 @@ void delete_unackd_table(short msg_id) {
     ERROR("Message with id %d not found in unackd_msg_table", msg_id);
 }
 
+void free_unackd_table() {
+    for (int i = 0; i < MAX_TBL_SIZE; i++) {
+        if (unackd_msg_table->messages[i] != NULL) {
+            free(unackd_msg_table->messages[i]->msg);
+            free(unackd_msg_table->messages[i]);
+        }
+    }
+    free(unackd_msg_table);
+}
+
 /*
     function for thread R
 
@@ -185,7 +208,7 @@ void *recv_thread(void *arg) {
             if (drop) {
                 continue;
             }
-            if (len == 0 || (len > 0 && buf[0] == 'D')) {
+            if (len == 0 || (len > 0 && buf[0] == DATA_TYPE)) {
                 pthread_mutex_lock(&recvd_msg_tbl->mutex);
                 while (recvd_msg_tbl->count == MAX_TBL_SIZE) {
                     pthread_mutex_unlock(&recvd_msg_tbl->mutex);
@@ -198,7 +221,7 @@ void *recv_thread(void *arg) {
                 // need to send acknowledgement if len > 0
                 if (len > 0) {
                     char ack_frame[MAX_FRAME_SIZE];
-                    ack_frame[0] = 'A';
+                    ack_frame[0] = ACK_TYPE;
                     short msg_id = ntohs(*(short *)(buf + TYPE_SIZE));
                     short t = htons(msg_id);
                     memcpy(ack_frame + TYPE_SIZE, &t, MSG_ID_SIZE);
@@ -206,7 +229,7 @@ void *recv_thread(void *arg) {
                     sendto(sockfd, ack_frame, TYPE_SIZE + MSG_ID_SIZE, 0, &src_addr, addrlen);
                 }
             } else {
-                assert(len > 0 && buf[0] == 'A');
+                assert(len > 0 && buf[0] == ACK_TYPE);
                 short msg_id = *(short *)(buf + TYPE_SIZE);
                 pthread_mutex_lock(&unackd_msg_table->mutex);
                 delete_unackd_table(msg_id);
@@ -246,6 +269,7 @@ void *retransmit_thread(void *arg) {
             }
         }
         pthread_mutex_unlock(&unackd_msg_table->mutex);
+        pthread_testcancel();  // cancellation point
     }
 }
 
@@ -265,7 +289,6 @@ int r_socket(int domain, int type, int protocol) {
     if (sockfd >= 0) {
         init_recvd_table();
         init_unackd_table();
-        pthread_t tid_R, tid_S;
         pthread_create(&tid_R, NULL, recv_thread, &sockfd);
         pthread_create(&tid_S, NULL, retransmit_thread, &sockfd);
     }
@@ -287,7 +310,7 @@ int r_bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
 ssize_t r_sendto(int sockfd, const void *buf, size_t len, int flags,
                  const struct sockaddr *dest_addr, socklen_t addrlen) {
     char data_frame[MAX_FRAME_SIZE];
-    data_frame[0] = 'D';
+    data_frame[0] = DATA_TYPE;
     short msg_id = htons(msg_cntr++);
     memcpy(data_frame + TYPE_SIZE, &msg_id, MSG_ID_SIZE);
     memcpy(data_frame + TYPE_SIZE + MSG_ID_SIZE, buf, len);
@@ -324,16 +347,25 @@ ssize_t r_recvfrom(int sockfd, void *buf, size_t len, int flags,
 }
 
 /*
-    close the socket
     kill threads R and S
     destroy mutexes
     free the tables (first free all char ptrs)
+    close the socket
 */
 int r_close(int fd) {
-    // call pthread_cancel
-    // pthread_join
-    // pthread_mutex_destroy
-    // free tables
+    pthread_cancel(tid_R);
+    pthread_cancel(tid_S);
+    pthread_join(tid_R, NULL);
+    pthread_join(tid_S, NULL);
+
+    pthread_mutex_destroy(&recvd_msg_tbl->mutex);
+    pthread_mutex_destroy(&unackd_msg_table->mutex);
+
+    free_recvd_table();
+    free_unackd_table();
+
+    int ret = close(fd);
+    return ret;
 }
 
 int main() {
