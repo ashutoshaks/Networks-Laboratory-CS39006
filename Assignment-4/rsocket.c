@@ -263,8 +263,11 @@ void *retransmit_thread(void *arg) {
                 timersub(&curr_time, &curr_entry->sent_time, &diff);
                 if (diff.tv_sec > TIMEOUT) {
                     // check return value to see if other side has closed connection
-                    sendto(sockfd, curr_entry->msg, curr_entry->msg_len, curr_entry->flags, &curr_entry->dest_addr, curr_entry->addrlen);
                     curr_entry->sent_time = curr_time;
+                    unackd_table_entry send_entry = *curr_entry;
+                    pthread_mutex_unlock(&unackd_msg_table->mutex);
+                    sendto(sockfd, send_entry.msg, send_entry.msg_len, send_entry.flags, &send_entry.dest_addr, send_entry.addrlen);
+                    pthread_mutex_lock(&unackd_msg_table->mutex);
                 }
             }
         }
