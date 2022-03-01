@@ -75,14 +75,17 @@ void enqueue_recvd_table(char *buf, size_t len, struct sockaddr *src_addr,
     in_entry->msg_len = len;
     in_entry->src_addr = *src_addr;
     in_entry->addrlen = addrlen;
+    DEBUG("enqueue_recvd_table: len: %d", (int)len);
     if (len > 0) {
         in_entry->msg_id = ntohs(*(short *)(buf + TYPE_SIZE));
         in_entry->msg = (char *)malloc(len * sizeof(char));
         memcpy(in_entry->msg, buf + TYPE_SIZE + MSG_ID_SIZE, len);
+        DEBUG("enqueue_recvd_table: in_entry->msg: %s", in_entry->msg);
     }
 
     recvd_msg_tbl->in = (recvd_msg_tbl->in + 1) % MAX_TBL_SIZE;
     recvd_msg_tbl->count++;
+    DEBUG("enqueue_recvd_table: count: %d", recvd_msg_tbl->count);
 }
 
 size_t dequeue_recvd_table(void *buf, size_t len, struct sockaddr *src_addr,
@@ -102,6 +105,7 @@ size_t dequeue_recvd_table(void *buf, size_t len, struct sockaddr *src_addr,
     recvd_msg_tbl->messages[recvd_msg_tbl->out] = NULL;
     recvd_msg_tbl->out = (recvd_msg_tbl->out + 1) % MAX_TBL_SIZE;
     recvd_msg_tbl->count--;
+    DEBUG("dequeue_recvd_table: count: %d", recvd_msg_tbl->count);
 
     return copy_len;
 }
@@ -128,6 +132,7 @@ typedef struct _unackd_table_entry {
 
 typedef struct _unackd_table {
     unackd_table_entry *messages[MAX_TBL_SIZE];
+    int count;
     pthread_mutex_t mutex;
 } unackd_table;
 
@@ -138,22 +143,25 @@ void init_unackd_table() {
     for (int i = 0; i < MAX_TBL_SIZE; i++) {
         unackd_msg_table->messages[i] = NULL;
     }
+    unackd_msg_table->count = 0;
     pthread_mutex_init(&unackd_msg_table->mutex, NULL);
 }
 
 void insert_unackd_table(char *buf, size_t len, int flags, const struct sockaddr *dest_addr,
-                         socklen_t addrlen, struct timeval sent_time) {
+                         socklen_t addrlen, struct timeval sent_time, short msg_id) {
     for (int i = 0; i < MAX_TBL_SIZE; i++) {
         if (unackd_msg_table->messages[i] == NULL) {
             unackd_msg_table->messages[i] = (unackd_table_entry *)malloc(sizeof(unackd_table_entry));
             unackd_table_entry *curr_entry = unackd_msg_table->messages[i];
             curr_entry->msg = (char *)malloc(len * sizeof(char));
+            curr_entry->msg_id = msg_id;
             curr_entry->msg_len = len;
             curr_entry->flags = flags;
             curr_entry->dest_addr = *(struct sockaddr *)dest_addr;
             curr_entry->addrlen = addrlen;
             curr_entry->sent_time = sent_time;
             memcpy(curr_entry->msg, buf, len);
+            unackd_msg_table->count++;
             return;
         }
     }
@@ -166,6 +174,7 @@ void delete_unackd_table(short msg_id) {
             free(unackd_msg_table->messages[i]->msg);
             free(unackd_msg_table->messages[i]);
             unackd_msg_table->messages[i] = NULL;
+            unackd_msg_table->count--;
             return;
         }
     }
@@ -203,6 +212,9 @@ void *recv_thread(void *arg) {
         char buf[MAX_FRAME_SIZE];
         pthread_testcancel();  // cancellation point
         ssize_t len = recvfrom(sockfd, buf, MAX_FRAME_SIZE, 0, &src_addr, &addrlen);
+        if (len == 0) {
+            DEBUG("recv_thread: recvfrom returned 0");
+        }
         if (len >= 0) {
             int drop = ((len > 0) && dropMessage(P));
             if (drop) {
@@ -215,7 +227,8 @@ void *recv_thread(void *arg) {
                     usleep(100);
                     pthread_mutex_lock(&recvd_msg_tbl->mutex);
                 }
-                enqueue_recvd_table(buf, len, &src_addr, addrlen);
+                ssize_t entry_len = ((len > 0) ? len - TYPE_SIZE - MSG_ID_SIZE : 0);
+                enqueue_recvd_table(buf, entry_len, &src_addr, addrlen);
                 pthread_mutex_unlock(&recvd_msg_tbl->mutex);
 
                 // need to send acknowledgement if len > 0
@@ -230,7 +243,7 @@ void *recv_thread(void *arg) {
                 }
             } else {
                 assert(len > 0 && buf[0] == ACK_TYPE);
-                short msg_id = *(short *)(buf + TYPE_SIZE);
+                short msg_id = ntohs(*(short *)(buf + TYPE_SIZE));
                 pthread_mutex_lock(&unackd_msg_table->mutex);
                 delete_unackd_table(msg_id);
                 pthread_mutex_unlock(&unackd_msg_table->mutex);
@@ -292,9 +305,17 @@ int r_socket(int domain, int type, int protocol) {
     if (sockfd >= 0) {
         init_recvd_table();
         init_unackd_table();
-        pthread_create(&tid_R, NULL, recv_thread, &sockfd);
-        pthread_create(&tid_S, NULL, retransmit_thread, &sockfd);
+        if (pthread_create(&tid_R, NULL, recv_thread, &sockfd) != 0) {
+            perror("pthread_create R");
+            return -1;
+        }
+        if (pthread_create(&tid_S, NULL, retransmit_thread, &sockfd) != 0) {
+            perror("pthread_create S");
+            return -1;
+        }
     }
+    DEBUG("pid: %d", getpid());
+    DEBUG("sockfd: %d", sockfd);
     return sockfd;
 }
 
@@ -314,8 +335,12 @@ ssize_t r_sendto(int sockfd, const void *buf, size_t len, int flags,
                  const struct sockaddr *dest_addr, socklen_t addrlen) {
     char data_frame[MAX_FRAME_SIZE];
     data_frame[0] = DATA_TYPE;
-    short msg_id = htons(msg_cntr++);
-    memcpy(data_frame + TYPE_SIZE, &msg_id, MSG_ID_SIZE);
+    short msg_id = msg_cntr++;
+    short msg_id_buf = htons(msg_id);
+    DEBUG("r_sendto: msg_id: %d", msg_id);
+    DEBUG("r_sendto: msg_cntr: %d", msg_cntr);
+    // DEBUG("r_sendto: buf: %s", (char *)buf);
+    memcpy(data_frame + TYPE_SIZE, &msg_id_buf, MSG_ID_SIZE);
     memcpy(data_frame + TYPE_SIZE + MSG_ID_SIZE, buf, len);
     struct timeval sent_time;
     gettimeofday(&sent_time, NULL);
@@ -323,7 +348,10 @@ ssize_t r_sendto(int sockfd, const void *buf, size_t len, int flags,
 
     if (sent_len > 0) {
         pthread_mutex_lock(&unackd_msg_table->mutex);
-        insert_unackd_table(data_frame, len + TYPE_SIZE + MSG_ID_SIZE, flags, dest_addr, addrlen, sent_time);
+        DEBUG("r_sendto: Before insert_unackd_table");
+        insert_unackd_table(data_frame, len + TYPE_SIZE + MSG_ID_SIZE, flags, dest_addr, addrlen, sent_time, msg_id);
+        DEBUG("sent_len: %d", (int)sent_len);
+        DEBUG("r_sendto: After insert_unackd_table");
         pthread_mutex_unlock(&unackd_msg_table->mutex);
     }
     return sent_len;
@@ -339,7 +367,9 @@ ssize_t r_recvfrom(int sockfd, void *buf, size_t len, int flags,
     while (1) {
         pthread_mutex_lock(&recvd_msg_tbl->mutex);
         if (recvd_msg_tbl->count > 0) {
+            DEBUG("Found a msg");
             size_t recv_len = dequeue_recvd_table(buf, len, src_addr, addrlen);
+            DEBUG("recv_len: %d", (int)recv_len);
             pthread_mutex_unlock(&recvd_msg_tbl->mutex);
             return recv_len;
         } else {
@@ -356,10 +386,20 @@ ssize_t r_recvfrom(int sockfd, void *buf, size_t len, int flags,
     close the socket
 */
 int r_close(int fd) {
+    // check if everything has been acked, only then go ahead
+    pthread_mutex_lock(&unackd_msg_table->mutex);
+    while (unackd_msg_table->count > 0) {
+        pthread_mutex_unlock(&unackd_msg_table->mutex);
+        usleep(100);
+        pthread_mutex_lock(&unackd_msg_table->mutex);
+    }
+    
     pthread_cancel(tid_R);
     pthread_cancel(tid_S);
-    pthread_join(tid_R, NULL);
-    pthread_join(tid_S, NULL);
+    int retval = pthread_join(tid_R, NULL);
+    DEBUG("pthread_join R: %d", retval);
+    retval = pthread_join(tid_S, NULL);
+    DEBUG("pthread_join S: %d", retval);
 
     pthread_mutex_destroy(&recvd_msg_tbl->mutex);
     pthread_mutex_destroy(&unackd_msg_table->mutex);
@@ -371,10 +411,10 @@ int r_close(int fd) {
     return ret;
 }
 
-int main() {
-    printf("%ld\n", sizeof(recvd_msg_tbl));
-    // struct timeval tv;
-    // gettimeofday(&tv, NULL);
-    // printf("%ld\n", tv.tv_sec);
-    // printf("%ld\n", tv.tv_usec);
-}
+// int main() {
+//     printf("%ld\n", sizeof(recvd_msg_tbl));
+//     // struct timeval tv;
+//     // gettimeofday(&tv, NULL);
+//     // printf("%ld\n", tv.tv_sec);
+//     // printf("%ld\n", tv.tv_usec);
+// }
