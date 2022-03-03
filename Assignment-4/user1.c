@@ -61,11 +61,13 @@ int main() {
     memset(msg, 0, MAX_MSG_LEN);
     printf("Enter a message: ");
     // scanf("%[^\n]s", msg);
-    sprintf(msg, "hello");
+    sprintf(msg, "hi dada baby");
     int msg_len = strlen(msg);
     for (int i = 0; i < msg_len; i++) {
         r_sendto(sockfd, &msg[i], 1, 0, (struct sockaddr *)&u2_addr, sizeof(u2_addr));
     }
     r_close(sockfd);
+    INFO("Total transmissions: %d", tot_transm);
+    INFO("Average transmissions: %f", (float)tot_transm / (float)strlen(msg));
     return 0;
 }

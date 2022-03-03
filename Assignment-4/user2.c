@@ -8,13 +8,22 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <signal.h>
 
 #include "rsocket.h"
 
 const int PORT_2 = 50017;
 const int MAX_MSG_LEN = 100;
 
+char buf[100];
+
+void sigint_handler(int sig) {
+    printf("\n%s\n", buf);
+    exit(1);
+}
+
 int main() {
+    signal(SIGINT, sigint_handler);
     int sockfd;
     if ((sockfd = r_socket(AF_INET, SOCK_MRP, 0)) < 0) {
         perror("r_socket");
@@ -51,6 +60,8 @@ int main() {
     //     printf("%s\n", msg);
     // }
 
+    memset(buf, 0, sizeof(buf));
+    int i = 0;
     while (1) {
         socklen_t u1_addr_len = sizeof(u1_addr);
         char msg[MAX_MSG_LEN];
@@ -59,10 +70,8 @@ int main() {
         if (msg_len < 0) {
             perror("Unable to read from socket");
             exit(1);
-        } else if (msg_len == 0) {
-            printf("Connection closed\n");
-            break;
         } else {
+            buf[i++] = msg[0];
             printf("%s", msg);
             fflush(stdout);
         }

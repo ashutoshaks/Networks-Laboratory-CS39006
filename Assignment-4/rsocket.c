@@ -3,6 +3,7 @@
 #include <arpa/inet.h>
 #include <assert.h>
 #include <dirent.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <netdb.h>
 #include <netinet/in.h>
@@ -37,6 +38,7 @@ arbitary no. of bytes - msg
 */
 
 short msg_cntr = 0;
+int tot_transm = 0;
 pthread_t tid_R, tid_S;
 
 typedef struct _recvd_table_entry {
@@ -279,7 +281,11 @@ void *retransmit_thread(void *arg) {
                     curr_entry->sent_time = curr_time;
                     unackd_table_entry send_entry = *curr_entry;
                     pthread_mutex_unlock(&unackd_msg_table->mutex);
-                    sendto(sockfd, send_entry.msg, send_entry.msg_len, send_entry.flags, &send_entry.dest_addr, send_entry.addrlen);
+                    int ret = sendto(sockfd, send_entry.msg, send_entry.msg_len, send_entry.flags, &send_entry.dest_addr, send_entry.addrlen);
+                    INFO("retransmit_thread: resending message with id %d", send_entry.msg_id);
+                    if (ret >= 0) {
+                        tot_transm++;
+                    }
                     pthread_mutex_lock(&unackd_msg_table->mutex);
                 }
             }
@@ -290,7 +296,11 @@ void *retransmit_thread(void *arg) {
 }
 
 int dropMessage(float p) {
+    struct timeval seed;
+    gettimeofday(&seed, NULL);
+    srand(seed.tv_usec);
     float rnd = (float)rand() / (float)RAND_MAX;
+    INFO("dropMessage: rnd = %f, p = %f", rnd, p);
     return (rnd < p);
 }
 
@@ -346,7 +356,8 @@ ssize_t r_sendto(int sockfd, const void *buf, size_t len, int flags,
     gettimeofday(&sent_time, NULL);
     ssize_t sent_len = sendto(sockfd, data_frame, TYPE_SIZE + MSG_ID_SIZE + len, flags, dest_addr, addrlen);
 
-    if (sent_len > 0) {
+    if (sent_len >= 0) {
+        tot_transm++;
         pthread_mutex_lock(&unackd_msg_table->mutex);
         DEBUG("r_sendto: Before insert_unackd_table");
         insert_unackd_table(data_frame, len + TYPE_SIZE + MSG_ID_SIZE, flags, dest_addr, addrlen, sent_time, msg_id);
@@ -393,7 +404,7 @@ int r_close(int fd) {
         usleep(100);
         pthread_mutex_lock(&unackd_msg_table->mutex);
     }
-    
+
     pthread_cancel(tid_R);
     pthread_cancel(tid_S);
     int retval = pthread_join(tid_R, NULL);
