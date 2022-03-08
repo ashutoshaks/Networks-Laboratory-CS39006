@@ -1,0 +1,337 @@
+[DEBUG] pid: 101064 
+[DEBUG] sockfd: 3 
+[INFO] sockfd: 3 
+Enter a message: [DEBUG] r_sendto: msg_id: 0 
+[DEBUG] r_sendto: msg_cntr: 1 
+[DEBUG] r_sendto: Before insert_unackd_table 
+[DEBUG] sent_len: 4 
+[DEBUG] r_sendto: After insert_unackd_table 
+[DEBUG] r_sendto: msg_id: 1 
+[DEBUG] r_sendto: msg_cntr: 2 
+[DEBUG] r_sendto: Before insert_unackd_table 
+[DEBUG] sent_len: 4 
+[DEBUG] r_sendto: After insert_unackd_table 
+[DEBUG] r_sendto: msg_id: 2 
+[DEBUG] r_sendto: msg_cntr: 3 
+[DEBUG] r_sendto: Before insert_unackd_table 
+[DEBUG] sent_len: 4 
+[DEBUG] r_sendto: After insert_unackd_table 
+[DEBUG] r_sendto: msg_id: 3 
+[DEBUG] r_sendto: msg_cntr: 4 
+[DEBUG] r_sendto: Before insert_unackd_table 
+[DEBUG] sent_len: 4 
+[DEBUG] r_sendto: After insert_unackd_table 
+[DEBUG] r_sendto: msg_id: 4 
+[DEBUG] r_sendto: msg_cntr: 5 
+[DEBUG] r_sendto: Before insert_unackd_table 
+[DEBUG] sent_len: 4 
+[DEBUG] r_sendto: After insert_unackd_table 
+[DEBUG] r_sendto: msg_id: 5 
+[DEBUG] r_sendto: msg_cntr: 6 
+[DEBUG] r_sendto: Before insert_unackd_table 
+[DEBUG] sent_len: 4 
+[DEBUG] r_sendto: After insert_unackd_table 
+[DEBUG] r_sendto: msg_id: 6 
+[DEBUG] r_sendto: msg_cntr: 7 
+[DEBUG] r_sendto: Before insert_unackd_table 
+[DEBUG] sent_len: 4 
+[DEBUG] r_sendto: After insert_unackd_table 
+[DEBUG] r_sendto: msg_id: 7 
+[DEBUG] r_sendto: msg_cntr: 8 
+[DEBUG] recv_thread: type A 
+[DEBUG] recv_thread: id 0 
+[INFO] dropMessage: rnd = 0.232419, p = 0.050000 
+[DEBUG] r_sendto: Before insert_unackd_table 
+[DEBUG] sent_len: 4 
+[DEBUG] r_sendto: After insert_unackd_table 
+[DEBUG] r_sendto: msg_id: 8 
+[DEBUG] r_sendto: msg_cntr: 9 
+[DEBUG] r_sendto: Before insert_unackd_table 
+[DEBUG] sent_len: 4 
+[DEBUG] recv_thread: type A 
+[DEBUG] recv_thread: id 1 
+[INFO] dropMessage: rnd = 0.139478, p = 0.050000 
+[DEBUG] r_sendto: After insert_unackd_table 
+[DEBUG] r_sendto: msg_id: 9 
+[DEBUG] r_sendto: msg_cntr: 10 
+[DEBUG] recv_thread: type A 
+[DEBUG] recv_thread: id 2 
+[INFO] dropMessage: rnd = 0.824839, p = 0.050000 
+[DEBUG] r_sendto: Before insert_unackd_table 
+[DEBUG] sent_len: 4 
+[DEBUG] r_sendto: After insert_unackd_table 
+[DEBUG] r_sendto: msg_id: 10 
+[DEBUG] r_sendto: msg_cntr: 11 
+[DEBUG] recv_thread: type A 
+[DEBUG] recv_thread: id 3 
+[INFO] dropMessage: rnd = 0.910155, p = 0.050000 
+[DEBUG] r_sendto: Before insert_unackd_table 
+[DEBUG] sent_len: 4 
+[DEBUG] r_sendto: After insert_unackd_table 
+[DEBUG] r_sendto: msg_id: 11 
+[DEBUG] r_sendto: msg_cntr: 12 
+[DEBUG] recv_thread: type A 
+[DEBUG] recv_thread: id 4 
+[INFO] dropMessage: rnd = 0.551603, p = 0.050000 
+[DEBUG] r_sendto: Before insert_unackd_table 
+[DEBUG] sent_len: 4 
+[DEBUG] r_sendto: After insert_unackd_table 
+[DEBUG] r_sendto: msg_id: 12 
+[DEBUG] r_sendto: msg_cntr: 13 
+[DEBUG] recv_thread: type A 
+[DEBUG] recv_thread: id 5 
+[DEBUG] r_sendto: Before insert_unackd_table 
+[DEBUG] sent_len: 4 
+[DEBUG] r_sendto: After insert_unackd_table 
+[DEBUG] r_sendto: msg_id: 13 
+[DEBUG] r_sendto: msg_cntr: 14 
+[INFO] dropMessage: rnd = 0.105181, p = 0.050000 
+[DEBUG] r_sendto: Before insert_unackd_table 
+[DEBUG] sent_len: 4 
+[DEBUG] r_sendto: After insert_unackd_table 
+[DEBUG] r_sendto: msg_id: 14 
+[DEBUG] r_sendto: msg_cntr: 15 
+[DEBUG] recv_thread: type A 
+[DEBUG] recv_thread: id 6 
+[INFO] dropMessage: rnd = 0.363624, p = 0.050000 
+[DEBUG] r_sendto: Before insert_unackd_table 
+[DEBUG] sent_len: 4 
+[DEBUG] r_sendto: After insert_unackd_table 
+[DEBUG] r_sendto: msg_id: 15 
+[DEBUG] r_sendto: msg_cntr: 16 
+[DEBUG] recv_thread: type A 
+[DEBUG] r_sendto: Before insert_unackd_table 
+[DEBUG] sent_len: 4 
+[DEBUG] r_sendto: After insert_unackd_table 
+[DEBUG] r_sendto: msg_id: 16 
+[DEBUG] r_sendto: msg_cntr: 17 
+[DEBUG] recv_thread: id 7 
+[DEBUG] r_sendto: Before insert_unackd_table 
+[DEBUG] sent_len: 4 
+[DEBUG] r_sendto: After insert_unackd_table 
+[INFO] dropMessage: rnd = 0.537113, p = 0.050000 
+[DEBUG] r_sendto: msg_id: 17 
+[DEBUG] r_sendto: msg_cntr: 18 
+[DEBUG] recv_thread: type A 
+[DEBUG] r_sendto: Before insert_unackd_table 
+[DEBUG] sent_len: 4 
+[DEBUG] r_sendto: After insert_unackd_table 
+[DEBUG] r_sendto: msg_id: 18 
+[DEBUG] r_sendto: msg_cntr: 19 
+[DEBUG] recv_thread: id 8 
+[INFO] dropMessage: rnd = 0.785846, p = 0.050000 
+[DEBUG] r_sendto: Before insert_unackd_table 
+[DEBUG] sent_len: 4 
+[DEBUG] r_sendto: After insert_unackd_table 
+[DEBUG] r_sendto: msg_id: 19 
+[DEBUG] r_sendto: msg_cntr: 20 
+[DEBUG] recv_thread: type A 
+[DEBUG] recv_thread: id 9 
+[INFO] dropMessage: rnd = 0.027701, p = 0.050000 
+[DEBUG] recv_thread: type A 
+[DEBUG] recv_thread: id 10 
+[INFO] dropMessage: rnd = 0.180004, p = 0.050000 
+[DEBUG] r_sendto: Before insert_unackd_table 
+[DEBUG] sent_len: 4 
+[DEBUG] r_sendto: After insert_unackd_table 
+[DEBUG] r_sendto: msg_id: 20 
+[DEBUG] r_sendto: msg_cntr: 21 
+[DEBUG] recv_thread: type A 
+[DEBUG] recv_thread: id 11 
+[INFO] dropMessage: rnd = 0.663781, p = 0.050000 
+[DEBUG] r_sendto: Before insert_unackd_table 
+[DEBUG] sent_len: 4 
+[DEBUG] r_sendto: After insert_unackd_table 
+[DEBUG] r_sendto: msg_id: 21 
+[DEBUG] r_sendto: msg_cntr: 22 
+[DEBUG] recv_thread: type A 
+[DEBUG] r_sendto: Before insert_unackd_table 
+[DEBUG] sent_len: 4 
+[DEBUG] r_sendto: After insert_unackd_table 
+[DEBUG] r_sendto: msg_id: 22 
+[DEBUG] r_sendto: msg_cntr: 23 
+[DEBUG] recv_thread: id 12 
+[INFO] dropMessage: rnd = 0.685677, p = 0.050000 
+[DEBUG] r_sendto: Before insert_unackd_table 
+[DEBUG] sent_len: 4 
+[DEBUG] r_sendto: After insert_unackd_table 
+[DEBUG] r_sendto: msg_id: 23 
+[DEBUG] r_sendto: msg_cntr: 24 
+[DEBUG] recv_thread: type A 
+[DEBUG] recv_thread: id 13 
+[INFO] dropMessage: rnd = 0.609215, p = 0.050000 
+[DEBUG] r_sendto: Before insert_unackd_table 
+[DEBUG] sent_len: 4 
+[DEBUG] r_sendto: After insert_unackd_table 
+[DEBUG] r_sendto: msg_id: 24 
+[DEBUG] r_sendto: msg_cntr: 25 
+[DEBUG] recv_thread: type A 
+[DEBUG] recv_thread: id 14 
+[INFO] dropMessage: rnd = 0.644557, p = 0.050000 
+[DEBUG] r_sendto: Before insert_unackd_table 
+[DEBUG] sent_len: 4 
+[DEBUG] r_sendto: After insert_unackd_table 
+[DEBUG] r_sendto: msg_id: 25 
+[DEBUG] r_sendto: msg_cntr: 26 
+[DEBUG] recv_thread: type A 
+[DEBUG] recv_thread: id 16 
+[INFO] dropMessage: rnd = 0.925490, p = 0.050000 
+[DEBUG] r_sendto: Before insert_unackd_table 
+[DEBUG] sent_len: 4 
+[DEBUG] r_sendto: After insert_unackd_table 
+[DEBUG] r_sendto: msg_id: 26 
+[DEBUG] r_sendto: msg_cntr: 27 
+[DEBUG] recv_thread: type A 
+[DEBUG] recv_thread: id 17 
+[INFO] dropMessage: rnd = 0.508922, p = 0.050000 
+[DEBUG] r_sendto: Before insert_unackd_table 
+[DEBUG] sent_len: 4 
+[DEBUG] r_sendto: After insert_unackd_table 
+[DEBUG] r_sendto: msg_id: 27 
+[DEBUG] r_sendto: msg_cntr: 28 
+[DEBUG] recv_thread: type A 
+[DEBUG] recv_thread: id 18 
+[DEBUG] r_sendto: Before insert_unackd_table 
+[DEBUG] sent_len: 4 
+[DEBUG] r_sendto: After insert_unackd_table 
+[DEBUG] r_sendto: msg_id: 28 
+[DEBUG] r_sendto: msg_cntr: 29 
+[INFO] dropMessage: rnd = 0.095132, p = 0.050000 
+[DEBUG] r_sendto: Before insert_unackd_table 
+[DEBUG] sent_len: 4 
+[DEBUG] r_sendto: After insert_unackd_table 
+[DEBUG] r_sendto: msg_id: 29 
+[DEBUG] r_sendto: msg_cntr: 30 
+[DEBUG] recv_thread: type A 
+[DEBUG] recv_thread: id 19 
+[INFO] dropMessage: rnd = 0.382762, p = 0.050000 
+[DEBUG] r_sendto: Before insert_unackd_table 
+[DEBUG] sent_len: 4 
+[DEBUG] r_sendto: After insert_unackd_table 
+[DEBUG] r_sendto: msg_id: 30 
+[DEBUG] r_sendto: msg_cntr: 31 
+[DEBUG] recv_thread: type A 
+[DEBUG] recv_thread: id 20 
+[INFO] dropMessage: rnd = 0.242252, p = 0.050000 
+[DEBUG] r_sendto: Before insert_unackd_table 
+[DEBUG] sent_len: 4 
+[DEBUG] r_sendto: After insert_unackd_table 
+[DEBUG] r_sendto: msg_id: 31 
+[DEBUG] r_sendto: msg_cntr: 32 
+[DEBUG] r_sendto: Before insert_unackd_table 
+[DEBUG] sent_len: 4 
+[DEBUG] r_sendto: After insert_unackd_table 
+[DEBUG] r_sendto: msg_id: 32 
+[DEBUG] r_sendto: msg_cntr: 33 
+[DEBUG] r_sendto: Before insert_unackd_table 
+[DEBUG] sent_len: 4 
+[DEBUG] r_sendto: After insert_unackd_table 
+[DEBUG] r_sendto: msg_id: 33 
+[DEBUG] r_sendto: msg_cntr: 34 
+[DEBUG] r_sendto: Before insert_unackd_table 
+[DEBUG] sent_len: 4 
+[DEBUG] r_sendto: After insert_unackd_table 
+[DEBUG] r_sendto: msg_id: 34 
+[DEBUG] r_sendto: msg_cntr: 35 
+[DEBUG] recv_thread: type A 
+[DEBUG] recv_thread: id 21 
+[INFO] dropMessage: rnd = 0.093785, p = 0.050000 
+[DEBUG] recv_thread: type A 
+[DEBUG] recv_thread: id 22 
+[INFO] dropMessage: rnd = 0.977295, p = 0.050000 
+[DEBUG] r_sendto: Before insert_unackd_table 
+[DEBUG] sent_len: 4 
+[DEBUG] r_sendto: After insert_unackd_table 
+[DEBUG] r_sendto: msg_id: 35 
+[DEBUG] r_sendto: msg_cntr: 36 
+[DEBUG] recv_thread: type A 
+[DEBUG] recv_thread: id 23 
+[INFO] dropMessage: rnd = 0.033910, p = 0.050000 
+[DEBUG] recv_thread: type A 
+[DEBUG] recv_thread: id 24 
+[INFO] dropMessage: rnd = 0.785013, p = 0.050000 
+[DEBUG] r_sendto: Before insert_unackd_table 
+[DEBUG] sent_len: 4 
+[DEBUG] r_sendto: After insert_unackd_table 
+[DEBUG] r_sendto: msg_id: 36 
+[DEBUG] r_sendto: msg_cntr: 37 
+[DEBUG] recv_thread: type A 
+[DEBUG] recv_thread: id 25 
+[INFO] dropMessage: rnd = 0.403146, p = 0.050000 
+[DEBUG] r_sendto: Before insert_unackd_table 
+[DEBUG] sent_len: 4 
+[DEBUG] r_sendto: After insert_unackd_table 
+[DEBUG] r_sendto: msg_id: 37 
+[DEBUG] r_sendto: msg_cntr: 38 
+[DEBUG] recv_thread: type A 
+[DEBUG] r_sendto: Before insert_unackd_table 
+[DEBUG] sent_len: 4 
+[DEBUG] r_sendto: After insert_unackd_table 
+[DEBUG] r_sendto: msg_id: 38 
+[DEBUG] r_sendto: msg_cntr: 39 
+[DEBUG] recv_thread: id 26 
+[INFO] dropMessage: rnd = 0.706385, p = 0.050000 
+[DEBUG] r_sendto: Before insert_unackd_table 
+[DEBUG] sent_len: 4 
+[DEBUG] r_sendto: After insert_unackd_table 
+[DEBUG] r_sendto: msg_id: 39 
+[DEBUG] r_sendto: msg_cntr: 40 
+[DEBUG] recv_thread: type A 
+[DEBUG] recv_thread: id 27 
+[INFO] dropMessage: rnd = 0.684471, p = 0.050000 
+[DEBUG] r_sendto: Before insert_unackd_table 
+[DEBUG] sent_len: 4 
+[DEBUG] r_sendto: After insert_unackd_table 
+[DEBUG] recv_thread: type A 
+[DEBUG] recv_thread: id 28 
+[INFO] dropMessage: rnd = 0.957443, p = 0.050000 
+[DEBUG] recv_thread: type A 
+[DEBUG] recv_thread: id 29 
+[INFO] dropMessage: rnd = 0.880658, p = 0.050000 
+[DEBUG] recv_thread: type A 
+[DEBUG] recv_thread: id 30 
+[INFO] dropMessage: rnd = 0.460283, p = 0.050000 
+[DEBUG] recv_thread: type A 
+[DEBUG] recv_thread: id 31 
+[INFO] dropMessage: rnd = 0.980043, p = 0.050000 
+[DEBUG] recv_thread: type A 
+[DEBUG] recv_thread: id 32 
+[INFO] dropMessage: rnd = 0.113077, p = 0.050000 
+[DEBUG] recv_thread: type A 
+[DEBUG] recv_thread: id 33 
+[INFO] dropMessage: rnd = 0.599761, p = 0.050000 
+[DEBUG] recv_thread: type A 
+[DEBUG] recv_thread: id 34 
+[INFO] dropMessage: rnd = 0.804882, p = 0.050000 
+[DEBUG] recv_thread: type A 
+[DEBUG] recv_thread: id 35 
+[INFO] dropMessage: rnd = 0.023232, p = 0.050000 
+[DEBUG] recv_thread: type A 
+[DEBUG] recv_thread: id 36 
+[INFO] dropMessage: rnd = 0.151364, p = 0.050000 
+[DEBUG] recv_thread: type A 
+[DEBUG] recv_thread: id 37 
+[INFO] dropMessage: rnd = 0.910063, p = 0.050000 
+[DEBUG] recv_thread: type A 
+[DEBUG] recv_thread: id 38 
+[INFO] dropMessage: rnd = 0.386855, p = 0.050000 
+[DEBUG] recv_thread: type A 
+[DEBUG] recv_thread: id 39 
+[INFO] dropMessage: rnd = 0.688477, p = 0.050000 
+[INFO] retransmit_thread: resending message with id 9 
+[INFO] retransmit_thread: resending message with id 35 
+[INFO] retransmit_thread: resending message with id 23 
+[INFO] retransmit_thread: resending message with id 15 
+[INFO] retransmit_thread: resending message with id 9 
+[INFO] retransmit_thread: resending message with id 35 
+[INFO] retransmit_thread: resending message with id 23 
+[INFO] retransmit_thread: resending message with id 15 
+[INFO] retransmit_thread: resending message with id 9 
+[INFO] retransmit_thread: resending message with id 35 
+[INFO] retransmit_thread: resending message with id 23 
+[INFO] retransmit_thread: resending message with id 15 
+[INFO] retransmit_thread: resending message with id 9 
+[INFO] retransmit_thread: resending message with id 35 
+[INFO] retransmit_thread: resending message with id 23 
+[INFO] retransmit_thread: resending message with id 15 
+^C

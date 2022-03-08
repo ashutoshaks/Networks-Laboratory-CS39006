@@ -4,15 +4,15 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
-#define ERROR(msg, ...) printf("\033[1;31m[ERROR] " msg " \033[0m\n", ##__VA_ARGS__); fflush(stdout);
+#define ERROR(msg, ...) printf("\033[1;31m[ERROR] %d " msg " \033[0m\n", gettid(), ##__VA_ARGS__); fflush(stdout);
 #define SUCCESS(msg, ...) printf("\033[1;36m[SUCCESS] " msg " \033[0m\n", ##__VA_ARGS__); fflush(stdout);
-#define DEBUG(msg, ...) printf("\033[1;34m[DEBUG] " msg " \033[0m\n", ##__VA_ARGS__); fflush(stdout);
-#define INFO(msg, ...) printf("\033[1;32m[INFO] " msg " \033[0m\n", ##__VA_ARGS__); fflush(stdout);
+#define DEBUG(msg, ...) printf("\033[1;34m[DEBUG] %d " msg " \033[0m\n", gettid(), ##__VA_ARGS__); fflush(stdout);
+#define INFO(msg, ...) printf("\033[1;32m[INFO] %d " msg " \033[0m\n", gettid(), ##__VA_ARGS__); fflush(stdout);
 #define PROMPT(msg, ...) printf("\033[1;32m" msg "\033[0m", ##__VA_ARGS__); fflush(stdout);
 
 #define SOCK_MRP 15
 #define T 2
-#define P 0.30
+#define P 0.05
 #define TIMEOUT (2 * T)
 
 /*

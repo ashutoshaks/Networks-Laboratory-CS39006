@@ -18,7 +18,8 @@ const int MAX_MSG_LEN = 100;
 char buf[100];
 
 void sigint_handler(int sig) {
-    printf("\n%s\n", buf);
+    printf("\n%ld, %s\n", strlen(buf), buf);
+    fflush(stdout);
     exit(1);
 }
 

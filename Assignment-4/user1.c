@@ -61,7 +61,7 @@ int main() {
     memset(msg, 0, MAX_MSG_LEN);
     printf("Enter a message: ");
     // scanf("%[^\n]s", msg);
-    sprintf(msg, "hi dada baby");
+    sprintf(msg, "vanshitavanshitavanshitavanshitavanshita");
     int msg_len = strlen(msg);
     for (int i = 0; i < msg_len; i++) {
         r_sendto(sockfd, &msg[i], 1, 0, (struct sockaddr *)&u2_addr, sizeof(u2_addr));

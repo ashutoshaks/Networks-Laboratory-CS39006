@@ -37,6 +37,24 @@ Frame Format:
 arbitary no. of bytes - msg
 */
 
+#define LOCK(mutex_p)                                                            \
+    do {                                                                         \
+        int ret = pthread_mutex_lock(mutex_p);                                   \
+        if (ret != 0) {                                                          \
+            ERROR("%d: pthread_mutex_lock failed: %s", __LINE__, strerror(ret)); \
+            exit(1);                                                             \
+        }                                                                        \
+    } while (0)
+
+#define UNLOCK(mutex_p)                                                            \
+    do {                                                                           \
+        int ret = pthread_mutex_unlock(mutex_p);                                   \
+        if (ret != 0) {                                                            \
+            ERROR("%d: pthread_mutex_unlock failed: %s", __LINE__, strerror(ret)); \
+            exit(1);                                                               \
+        }                                                                          \
+    } while (0)
+
 short msg_cntr = 0;
 int tot_transm = 0;
 pthread_t tid_R, tid_S;
@@ -213,7 +231,13 @@ void *recv_thread(void *arg) {
         socklen_t addrlen = sizeof(src_addr);
         char buf[MAX_FRAME_SIZE];
         pthread_testcancel();  // cancellation point
+        DEBUG("Ready to receive");
         ssize_t len = recvfrom(sockfd, buf, MAX_FRAME_SIZE, 0, &src_addr, &addrlen);
+
+        DEBUG("recv_thread: type %c", buf[0]);
+        short id = ntohs(*(short *)(buf + TYPE_SIZE));
+        DEBUG("recv_thread: id %d", id);
+
         if (len == 0) {
             DEBUG("recv_thread: recvfrom returned 0");
         }
@@ -223,15 +247,15 @@ void *recv_thread(void *arg) {
                 continue;
             }
             if (len == 0 || (len > 0 && buf[0] == DATA_TYPE)) {
-                pthread_mutex_lock(&recvd_msg_tbl->mutex);
+                LOCK(&recvd_msg_tbl->mutex);
                 while (recvd_msg_tbl->count == MAX_TBL_SIZE) {
-                    pthread_mutex_unlock(&recvd_msg_tbl->mutex);
+                    UNLOCK(&recvd_msg_tbl->mutex);
                     usleep(100);
-                    pthread_mutex_lock(&recvd_msg_tbl->mutex);
+                    LOCK(&recvd_msg_tbl->mutex);
                 }
                 ssize_t entry_len = ((len > 0) ? len - TYPE_SIZE - MSG_ID_SIZE : 0);
                 enqueue_recvd_table(buf, entry_len, &src_addr, addrlen);
-                pthread_mutex_unlock(&recvd_msg_tbl->mutex);
+                UNLOCK(&recvd_msg_tbl->mutex);
 
                 // need to send acknowledgement if len > 0
                 if (len > 0) {
@@ -246,9 +270,9 @@ void *recv_thread(void *arg) {
             } else {
                 assert(len > 0 && buf[0] == ACK_TYPE);
                 short msg_id = ntohs(*(short *)(buf + TYPE_SIZE));
-                pthread_mutex_lock(&unackd_msg_table->mutex);
+                LOCK(&unackd_msg_table->mutex);
                 delete_unackd_table(msg_id);
-                pthread_mutex_unlock(&unackd_msg_table->mutex);
+                UNLOCK(&unackd_msg_table->mutex);
             }
         } else {
             perror("recvfrom");
@@ -269,7 +293,7 @@ void *retransmit_thread(void *arg) {
     int sockfd = *(int *)arg;
     while (1) {
         sleep(T);
-        pthread_mutex_lock(&unackd_msg_table->mutex);
+        LOCK(&unackd_msg_table->mutex);
         for (int i = 0; i < MAX_TBL_SIZE; i++) {
             unackd_table_entry *curr_entry = unackd_msg_table->messages[i];
             if (curr_entry != NULL) {
@@ -280,25 +304,28 @@ void *retransmit_thread(void *arg) {
                     // check return value to see if other side has closed connection
                     curr_entry->sent_time = curr_time;
                     unackd_table_entry send_entry = *curr_entry;
-                    pthread_mutex_unlock(&unackd_msg_table->mutex);
+                    UNLOCK(&unackd_msg_table->mutex);
                     int ret = sendto(sockfd, send_entry.msg, send_entry.msg_len, send_entry.flags, &send_entry.dest_addr, send_entry.addrlen);
-                    INFO("retransmit_thread: resending message with id %d", send_entry.msg_id);
+                    INFO("retransmit_thread: resending message with id %d, ret: %d", send_entry.msg_id, ret);
                     if (ret >= 0) {
                         tot_transm++;
+                    } else {
+                        INFO("errno: %d", errno);
+                        perror("sendto");
                     }
-                    pthread_mutex_lock(&unackd_msg_table->mutex);
+                    LOCK(&unackd_msg_table->mutex);
                 }
             }
         }
-        pthread_mutex_unlock(&unackd_msg_table->mutex);
+        UNLOCK(&unackd_msg_table->mutex);
         pthread_testcancel();  // cancellation point
     }
 }
 
 int dropMessage(float p) {
-    struct timeval seed;
-    gettimeofday(&seed, NULL);
-    srand(seed.tv_usec);
+    // struct timeval seed;
+    // gettimeofday(&seed, NULL);
+    // srand(seed.tv_usec);
     float rnd = (float)rand() / (float)RAND_MAX;
     INFO("dropMessage: rnd = %f, p = %f", rnd, p);
     return (rnd < p);
@@ -324,6 +351,7 @@ int r_socket(int domain, int type, int protocol) {
             return -1;
         }
     }
+    srand(time(NULL));
     DEBUG("pid: %d", getpid());
     DEBUG("sockfd: %d", sockfd);
     return sockfd;
@@ -358,12 +386,12 @@ ssize_t r_sendto(int sockfd, const void *buf, size_t len, int flags,
 
     if (sent_len >= 0) {
         tot_transm++;
-        pthread_mutex_lock(&unackd_msg_table->mutex);
+        LOCK(&unackd_msg_table->mutex);
         DEBUG("r_sendto: Before insert_unackd_table");
         insert_unackd_table(data_frame, len + TYPE_SIZE + MSG_ID_SIZE, flags, dest_addr, addrlen, sent_time, msg_id);
         DEBUG("sent_len: %d", (int)sent_len);
         DEBUG("r_sendto: After insert_unackd_table");
-        pthread_mutex_unlock(&unackd_msg_table->mutex);
+        UNLOCK(&unackd_msg_table->mutex);
     }
     return sent_len;
 }
@@ -376,15 +404,15 @@ ssize_t r_sendto(int sockfd, const void *buf, size_t len, int flags,
 ssize_t r_recvfrom(int sockfd, void *buf, size_t len, int flags,
                    struct sockaddr *src_addr, socklen_t *addrlen) {
     while (1) {
-        pthread_mutex_lock(&recvd_msg_tbl->mutex);
+        LOCK(&recvd_msg_tbl->mutex);
         if (recvd_msg_tbl->count > 0) {
             DEBUG("Found a msg");
             size_t recv_len = dequeue_recvd_table(buf, len, src_addr, addrlen);
             DEBUG("recv_len: %d", (int)recv_len);
-            pthread_mutex_unlock(&recvd_msg_tbl->mutex);
+            UNLOCK(&recvd_msg_tbl->mutex);
             return recv_len;
         } else {
-            pthread_mutex_unlock(&recvd_msg_tbl->mutex);
+            UNLOCK(&recvd_msg_tbl->mutex);
             sleep(1);
         }
     }
@@ -398,14 +426,16 @@ ssize_t r_recvfrom(int sockfd, void *buf, size_t len, int flags,
 */
 int r_close(int fd) {
     // check if everything has been acked, only then go ahead
-    pthread_mutex_lock(&unackd_msg_table->mutex);
+    LOCK(&unackd_msg_table->mutex);
     while (unackd_msg_table->count > 0) {
-        pthread_mutex_unlock(&unackd_msg_table->mutex);
+        UNLOCK(&unackd_msg_table->mutex);
         usleep(100);
-        pthread_mutex_lock(&unackd_msg_table->mutex);
+        LOCK(&unackd_msg_table->mutex);
     }
 
+    DEBUG("r_close: before pthread_cancel tid_R");
     pthread_cancel(tid_R);
+    DEBUG("r_close: before pthread_cancel tid_S");
     pthread_cancel(tid_S);
     int retval = pthread_join(tid_R, NULL);
     DEBUG("pthread_join R: %d", retval);
