@@ -323,9 +323,9 @@ void *retransmit_thread(void *arg) {
 }
 
 int dropMessage(float p) {
-    // struct timeval seed;
-    // gettimeofday(&seed, NULL);
-    // srand(seed.tv_usec);
+    struct timeval seed;
+    gettimeofday(&seed, NULL);
+    srand(seed.tv_usec);
     float rnd = (float)rand() / (float)RAND_MAX;
     INFO("dropMessage: rnd = %f, p = %f", rnd, p);
     return (rnd < p);
@@ -339,19 +339,20 @@ int dropMessage(float p) {
 */
 int r_socket(int domain, int type, int protocol) {
     int sockfd = socket(domain, SOCK_DGRAM, protocol);
+    int *sockfd_arg = (int *)malloc(sizeof(int));
+    *sockfd_arg = sockfd;
     if (sockfd >= 0) {
         init_recvd_table();
         init_unackd_table();
-        if (pthread_create(&tid_R, NULL, recv_thread, &sockfd) != 0) {
+        if (pthread_create(&tid_R, NULL, recv_thread, sockfd_arg) != 0) {
             perror("pthread_create R");
             return -1;
         }
-        if (pthread_create(&tid_S, NULL, retransmit_thread, &sockfd) != 0) {
+        if (pthread_create(&tid_S, NULL, retransmit_thread, sockfd_arg) != 0) {
             perror("pthread_create S");
             return -1;
         }
     }
-    srand(time(NULL));
     DEBUG("pid: %d", getpid());
     DEBUG("sockfd: %d", sockfd);
     return sockfd;
