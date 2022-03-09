@@ -85,7 +85,10 @@ void init_recvd_table() {
     recvd_msg_tbl->in = 0;
     recvd_msg_tbl->out = 0;
     recvd_msg_tbl->count = 0;
-    pthread_mutex_init(&recvd_msg_tbl->mutex, NULL);
+    pthread_mutexattr_t attr;
+    pthread_mutexattr_init(&attr);
+    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ERRORCHECK_NP);
+    pthread_mutex_init(&recvd_msg_tbl->mutex, &attr);
 }
 
 void enqueue_recvd_table(char *buf, size_t len, struct sockaddr *src_addr,
@@ -164,7 +167,10 @@ void init_unackd_table() {
         unackd_msg_table->messages[i] = NULL;
     }
     unackd_msg_table->count = 0;
-    pthread_mutex_init(&unackd_msg_table->mutex, NULL);
+    pthread_mutexattr_t attr;
+    pthread_mutexattr_init(&attr);
+    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ERRORCHECK_NP);
+    pthread_mutex_init(&unackd_msg_table->mutex, &attr);
 }
 
 void insert_unackd_table(char *buf, size_t len, int flags, const struct sockaddr *dest_addr,
