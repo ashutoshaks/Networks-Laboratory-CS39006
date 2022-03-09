@@ -134,6 +134,7 @@ size_t dequeue_recvd_table(void *buf, size_t len, struct sockaddr *src_addr,
 }
 
 void free_recvd_table() {
+    pthread_mutex_destroy(&recvd_msg_tbl->mutex);
     for (int i = 0; i < MAX_TBL_SIZE; i++) {
         if (recvd_msg_tbl->messages[i] != NULL) {
             free(recvd_msg_tbl->messages[i]->msg);
@@ -208,6 +209,7 @@ void delete_unackd_table(short msg_id) {
 }
 
 void free_unackd_table() {
+    pthread_mutex_destroy(&unackd_msg_table->mutex);
     for (int i = 0; i < MAX_TBL_SIZE; i++) {
         if (unackd_msg_table->messages[i] != NULL) {
             free(unackd_msg_table->messages[i]->msg);
@@ -344,6 +346,10 @@ int dropMessage(float p) {
     Initialize all char ptrs to NULL
 */
 int r_socket(int domain, int type, int protocol) {
+    if (type != SOCK_MRP) {
+        ERROR("r_socket: type must be SOCK_MRP");
+        return -1;
+    }
     int sockfd = socket(domain, SOCK_DGRAM, protocol);
     int *sockfd_arg = (int *)malloc(sizeof(int));
     *sockfd_arg = sockfd;
@@ -449,20 +455,9 @@ int r_close(int fd) {
     retval = pthread_join(tid_S, NULL);
     DEBUG("pthread_join S: %d", retval);
 
-    pthread_mutex_destroy(&recvd_msg_tbl->mutex);
-    pthread_mutex_destroy(&unackd_msg_table->mutex);
-
     free_recvd_table();
     free_unackd_table();
 
     int ret = close(fd);
     return ret;
 }
-
-// int main() {
-//     printf("%ld\n", sizeof(recvd_msg_tbl));
-//     // struct timeval tv;
-//     // gettimeofday(&tv, NULL);
-//     // printf("%ld\n", tv.tv_sec);
-//     // printf("%ld\n", tv.tv_usec);
-// }
