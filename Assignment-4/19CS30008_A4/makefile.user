@@ -15,13 +15,8 @@ user2: user2.o librsocket.a
 user2.o: user2.c
 	$(CC) $(CFLAGS) -c user2.c
 
-lib: librsocket.a
-
-librsocket.a: rsocket.o
-	ar -rcs librsocket.a rsocket.o
-
-rsocket.o: rsocket.c rsocket.h
-	$(CC) $(CFLAGS) -c rsocket.c -lpthread
+librsocket.a: 
+	make -f makefile.librsocket
 
 clean:
-	rm -f user1 user1.o user2 user2.o librsocket.a rsocket.o
+	rm -f user1 user1.o user2 user2.o

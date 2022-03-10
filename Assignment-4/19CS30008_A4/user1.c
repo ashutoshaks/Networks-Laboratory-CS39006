@@ -19,9 +19,9 @@
 
 #include "rsocket.h"
 
-const int PORT_1 = 50016;
-const int PORT_2 = 50017;
-const int MAX_MSG_LEN = 100;
+#define PORT_1 50016
+#define PORT_2 50017
+#define MAX_MSG_LEN 100
 
 int main() {
     int sockfd;
@@ -30,16 +30,14 @@ int main() {
         exit(1);
     }
 
-    INFO("sockfd: %d", sockfd);
-
     struct sockaddr_in u1_addr, u2_addr;
+
     memset(&u1_addr, 0, sizeof(u1_addr));
     u1_addr.sin_family = AF_INET;
     u1_addr.sin_port = htons(PORT_1);
     u1_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
     memset(&u2_addr, 0, sizeof(u2_addr));
-
     u2_addr.sin_family = AF_INET;
     u2_addr.sin_port = htons(PORT_2);
     int s = inet_aton("127.0.0.1", &u2_addr.sin_addr);
@@ -53,21 +51,20 @@ int main() {
         exit(1);
     }
 
-    // sleep(10);
-
-    // r_sendto(sockfd, "h", 1, 0, (struct sockaddr *)&u2_addr, sizeof(u2_addr));
-
     char msg[MAX_MSG_LEN];
     memset(msg, 0, MAX_MSG_LEN);
     printf("Enter a message: ");
-    // scanf("%[^\n]s", msg);
-    sprintf(msg, "vanshitavanshitavanshitavanshitavanshita");
+    scanf("%[^\n]s", msg);
     int msg_len = strlen(msg);
     for (int i = 0; i < msg_len; i++) {
-        r_sendto(sockfd, &msg[i], 1, 0, (struct sockaddr *)&u2_addr, sizeof(u2_addr));
+        int ret = r_sendto(sockfd, &msg[i], 1, 0, (struct sockaddr *)&u2_addr, sizeof(u2_addr));
+        if (ret < 0) {
+            perror("r_sendto");
+            exit(1);
+        }
     }
-    r_close(sockfd);
-    INFO("Total transmissions: %d", tot_transm);
-    INFO("Average transmissions: %f", (float)tot_transm / (float)strlen(msg));
-    return 0;
+
+    // To ensure that all unacknowledged packets are delivered since we are never calling r_close
+    while (1)
+        ;
 }

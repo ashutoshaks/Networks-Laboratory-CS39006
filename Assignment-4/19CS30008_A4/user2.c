@@ -12,30 +12,19 @@
 
 #include "rsocket.h"
 
-const int PORT_2 = 50017;
-const int MAX_MSG_LEN = 100;
-
-char buf[100];
-
-void sigint_handler(int sig) {
-    printf("\n%ld, %s\n", strlen(buf), buf);
-    fflush(stdout);
-    exit(1);
-}
+#define PORT_2 50017
+#define MAX_MSG_LEN 100
 
 int main() {
-    signal(SIGINT, sigint_handler);
     int sockfd;
     if ((sockfd = r_socket(AF_INET, SOCK_MRP, 0)) < 0) {
         perror("r_socket");
         exit(1);
     }
 
-    INFO("sockfd: %d", sockfd);
-
     struct sockaddr_in u2_addr;
     struct sockaddr_in u1_addr;
-    // socklen_t u1_addr_len;
+    socklen_t u1_addr_len;
 
     memset(&u2_addr, 0, sizeof(u2_addr));
     u2_addr.sin_family = AF_INET;
@@ -47,32 +36,15 @@ int main() {
         exit(1);
     }
 
-    // sleep(10);
-
-    // char msg[MAX_MSG_LEN];
-    // memset(msg, 0, sizeof(msg));
-    // int msg_len = r_recvfrom(sockfd, msg, MAX_MSG_LEN, 0, (struct sockaddr *)&u1_addr, &u1_addr_len);
-    // if (msg_len < 0) {
-    //     perror("Unable to read from socket");
-    //     exit(1);
-    // } else if (msg_len == 0) {
-    //     printf("Connection closed\n");
-    // } else {
-    //     printf("%s\n", msg);
-    // }
-
-    memset(buf, 0, sizeof(buf));
-    int i = 0;
+    char msg[MAX_MSG_LEN];
     while (1) {
-        socklen_t u1_addr_len = sizeof(u1_addr);
-        char msg[MAX_MSG_LEN];
+        u1_addr_len = sizeof(u1_addr);
         memset(msg, 0, MAX_MSG_LEN);
         int msg_len = r_recvfrom(sockfd, msg, MAX_MSG_LEN, 0, (struct sockaddr *)&u1_addr, &u1_addr_len);
         if (msg_len < 0) {
-            perror("Unable to read from socket");
+            perror("r_recvfrom");
             exit(1);
         } else {
-            buf[i++] = msg[0];
             printf("%s", msg);
             fflush(stdout);
         }

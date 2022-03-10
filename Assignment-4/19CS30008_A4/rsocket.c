@@ -20,12 +20,17 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#define ERROR(msg, ...) printf("\033[1;31m[ERROR] " msg " \033[0m\n", ##__VA_ARGS__);
+#define SUCCESS(msg, ...) printf("\033[1;36m[SUCCESS] " msg " \033[0m\n", ##__VA_ARGS__);
+#define INFO(msg, ...) printf("\033[1;32m[INFO] " msg " \033[0m\n", ##__VA_ARGS__);
+#define PROMPT(msg, ...) printf("\033[1;32m" msg "\033[0m", ##__VA_ARGS__);
+
 #define ACK_TYPE 'A'
 #define DATA_TYPE 'D'
 
 #define TYPE_SIZE sizeof(char)
 #define MSG_ID_SIZE sizeof(short)
-#define MAX_MSG_SIZE 200
+#define MAX_MSG_SIZE 100
 #define MAX_FRAME_SIZE (TYPE_SIZE + MSG_ID_SIZE + MAX_MSG_SIZE)
 
 #define MAX_TBL_SIZE 100
@@ -34,30 +39,30 @@
 Frame Format:
 1 byte - char - type - D for data, A for ack
 2 bytes - short - msg_id
-arbitary no. of bytes - msg
+arbitary no. of bytes (max. 100) - msg
 */
 
-#define LOCK(mutex_p)                                                            \
-    do {                                                                         \
-        int ret = pthread_mutex_lock(mutex_p);                                   \
-        if (ret != 0) {                                                          \
-            ERROR("%d: pthread_mutex_lock failed: %s", __LINE__, strerror(ret)); \
-            exit(1);                                                             \
-        }                                                                        \
-    } while (0)
+// Wrapper around pthread_mutex_lock for error checking
+void LOCK(pthread_mutex_t *mutex) {
+    int ret = pthread_mutex_lock(mutex);
+    if (ret != 0) {
+        ERROR("pthread_mutex_lock failed: %s", strerror(ret));
+        exit(1);
+    }
+}
 
-#define UNLOCK(mutex_p)                                                            \
-    do {                                                                           \
-        int ret = pthread_mutex_unlock(mutex_p);                                   \
-        if (ret != 0) {                                                            \
-            ERROR("%d: pthread_mutex_unlock failed: %s", __LINE__, strerror(ret)); \
-            exit(1);                                                               \
-        }                                                                          \
-    } while (0)
+// Wrapper around pthread_mutex_unlock for error checking
+void UNLOCK(pthread_mutex_t *mutex) {
+    int ret = pthread_mutex_unlock(mutex);
+    if (ret != 0) {
+        ERROR("pthread_mutex_unlock failed: %s", strerror(ret));
+        exit(1);
+    }
+}
 
-short msg_cntr = 0;
-int tot_transm = 0;
-pthread_t tid_R, tid_S;
+short msg_cntr = 0;      // Message counter to keep track of next message id
+int tot_transm = 0;      // Total number of transmissions
+pthread_t tid_R, tid_S;  // Thread identifiers for the threads R and S
 
 typedef struct _recvd_table_entry {
     short msg_id;
@@ -75,8 +80,9 @@ typedef struct _recvd_table {
     pthread_mutex_t mutex;
 } recvd_table;
 
-recvd_table *recvd_msg_tbl;
+recvd_table *recvd_msg_tbl;  // Received message table
 
+// Initializes the received message table
 void init_recvd_table() {
     recvd_msg_tbl = (recvd_table *)malloc(sizeof(recvd_table));
     for (int i = 0; i < MAX_TBL_SIZE; i++) {
@@ -91,6 +97,7 @@ void init_recvd_table() {
     pthread_mutex_init(&recvd_msg_tbl->mutex, &attr);
 }
 
+// Adds a message to the back of received message table
 void enqueue_recvd_table(char *buf, size_t len, struct sockaddr *src_addr,
                          socklen_t addrlen) {
     recvd_msg_tbl->messages[recvd_msg_tbl->in] = (recvd_table_entry *)malloc(sizeof(recvd_table_entry));
@@ -98,19 +105,17 @@ void enqueue_recvd_table(char *buf, size_t len, struct sockaddr *src_addr,
     in_entry->msg_len = len;
     in_entry->src_addr = *src_addr;
     in_entry->addrlen = addrlen;
-    DEBUG("enqueue_recvd_table: len: %d", (int)len);
     if (len > 0) {
         in_entry->msg_id = ntohs(*(short *)(buf + TYPE_SIZE));
         in_entry->msg = (char *)malloc(len * sizeof(char));
         memcpy(in_entry->msg, buf + TYPE_SIZE + MSG_ID_SIZE, len);
-        DEBUG("enqueue_recvd_table: in_entry->msg: %s", in_entry->msg);
     }
 
     recvd_msg_tbl->in = (recvd_msg_tbl->in + 1) % MAX_TBL_SIZE;
     recvd_msg_tbl->count++;
-    DEBUG("enqueue_recvd_table: count: %d", recvd_msg_tbl->count);
 }
 
+// Removes a message from the front of received message table
 size_t dequeue_recvd_table(void *buf, size_t len, struct sockaddr *src_addr,
                            socklen_t *addrlen) {
     recvd_table_entry *out_entry = recvd_msg_tbl->messages[recvd_msg_tbl->out];
@@ -128,11 +133,11 @@ size_t dequeue_recvd_table(void *buf, size_t len, struct sockaddr *src_addr,
     recvd_msg_tbl->messages[recvd_msg_tbl->out] = NULL;
     recvd_msg_tbl->out = (recvd_msg_tbl->out + 1) % MAX_TBL_SIZE;
     recvd_msg_tbl->count--;
-    DEBUG("dequeue_recvd_table: count: %d", recvd_msg_tbl->count);
 
     return copy_len;
 }
 
+// Frees the memory allocated to the received message table
 void free_recvd_table() {
     pthread_mutex_destroy(&recvd_msg_tbl->mutex);
     for (int i = 0; i < MAX_TBL_SIZE; i++) {
@@ -160,8 +165,9 @@ typedef struct _unackd_table {
     pthread_mutex_t mutex;
 } unackd_table;
 
-unackd_table *unackd_msg_table;
+unackd_table *unackd_msg_table;  // Unacknowledged message table
 
+// Initializes the unacknowledged message table
 void init_unackd_table() {
     unackd_msg_table = (unackd_table *)malloc(sizeof(unackd_table));
     for (int i = 0; i < MAX_TBL_SIZE; i++) {
@@ -174,6 +180,7 @@ void init_unackd_table() {
     pthread_mutex_init(&unackd_msg_table->mutex, &attr);
 }
 
+// Adds a message to the unacknowledged message table
 void insert_unackd_table(char *buf, size_t len, int flags, const struct sockaddr *dest_addr,
                          socklen_t addrlen, struct timeval sent_time, short msg_id) {
     for (int i = 0; i < MAX_TBL_SIZE; i++) {
@@ -192,9 +199,9 @@ void insert_unackd_table(char *buf, size_t len, int flags, const struct sockaddr
             return;
         }
     }
-    ERROR("Unable to insert into unackd_msg_tbl");
 }
 
+// Removes a message from the unacknowledged message table
 void delete_unackd_table(short msg_id) {
     for (int i = 0; i < MAX_TBL_SIZE; i++) {
         if (unackd_msg_table->messages[i] != NULL && unackd_msg_table->messages[i]->msg_id == msg_id) {
@@ -205,9 +212,9 @@ void delete_unackd_table(short msg_id) {
             return;
         }
     }
-    ERROR("Message with id %d not found in unackd_msg_table", msg_id);
 }
 
+// Frees the memory allocated to the received message table
 void free_unackd_table() {
     pthread_mutex_destroy(&unackd_msg_table->mutex);
     for (int i = 0; i < MAX_TBL_SIZE; i++) {
@@ -220,17 +227,11 @@ void free_unackd_table() {
 }
 
 /*
-    function for thread R
+    Function for thread R
 
-    wait for message by calling recvfrom (this will get a frame)
-    if data message, call dropMessage, accordingly add to received-message table and send ack
-    for sending ack DON'T call r_sendto
-    if ack message, delete from unacknowledged-message table
-
-    char buf[MAX_FRAME_SIZE];
-    ssize_t n = recv_from(sockfd, buf, MAX_FRAME_SIZE, 0, src_addr, addrlen);
-    free(table_entry_ptr);
-    table_entry_ptr = (char*)malloc(n * sizeof(char));
+    Waits for message by calling recvfrom (this will get a frame)
+    If it is a data message, calld dropMessage, accordingly adds to the received-message table and sends back an ACK
+    If it is an ACK message, delete the appropriate message from the unacknowledged-message table
 */
 void *recv_thread(void *arg) {
     int sockfd = *(int *)arg;
@@ -239,16 +240,8 @@ void *recv_thread(void *arg) {
         socklen_t addrlen = sizeof(src_addr);
         char buf[MAX_FRAME_SIZE];
         pthread_testcancel();  // cancellation point
-        DEBUG("Ready to receive");
         ssize_t len = recvfrom(sockfd, buf, MAX_FRAME_SIZE, 0, &src_addr, &addrlen);
 
-        DEBUG("recv_thread: type %c", buf[0]);
-        short id = ntohs(*(short *)(buf + TYPE_SIZE));
-        DEBUG("recv_thread: id %d", id);
-
-        if (len == 0) {
-            DEBUG("recv_thread: recvfrom returned 0");
-        }
         if (len >= 0) {
             int drop = ((len > 0) && dropMessage(P));
             if (drop) {
@@ -272,7 +265,6 @@ void *recv_thread(void *arg) {
                     short msg_id = ntohs(*(short *)(buf + TYPE_SIZE));
                     short t = htons(msg_id);
                     memcpy(ack_frame + TYPE_SIZE, &t, MSG_ID_SIZE);
-                    // *(short *)(ack_frame + TYPE_SIZE) = *(short *)(buf + TYPE_SIZE);
                     sendto(sockfd, ack_frame, TYPE_SIZE + MSG_ID_SIZE, 0, &src_addr, addrlen);
                 }
             } else {
@@ -290,12 +282,12 @@ void *recv_thread(void *arg) {
 }
 
 /*
-    function for thread S
+    Function for thread S
 
-    sleep for time T
-    on waking up, check unacknowledged-message table
-    if any message has timed out, resend it and update its timestamp (resend using sendto, not r_sendto)
-    do this for all messages in the unacknowledged-message table
+    Sleeps for time T
+    On waking up, checks the unacknowledged-message table
+    If any message has timed out, resends it and updates its timestamp
+    Does this for all messages in the unacknowledged-message table
 */
 void *retransmit_thread(void *arg) {
     int sockfd = *(int *)arg;
@@ -314,11 +306,9 @@ void *retransmit_thread(void *arg) {
                     unackd_table_entry send_entry = *curr_entry;
                     UNLOCK(&unackd_msg_table->mutex);
                     int ret = sendto(sockfd, send_entry.msg, send_entry.msg_len, send_entry.flags, &send_entry.dest_addr, send_entry.addrlen);
-                    INFO("retransmit_thread: resending message with id %d, ret: %d", send_entry.msg_id, ret);
                     if (ret >= 0) {
                         tot_transm++;
                     } else {
-                        INFO("errno: %d", errno);
                         perror("sendto");
                     }
                     LOCK(&unackd_msg_table->mutex);
@@ -331,21 +321,16 @@ void *retransmit_thread(void *arg) {
 }
 
 int dropMessage(float p) {
-    struct timeval seed;
-    gettimeofday(&seed, NULL);
-    srand(seed.tv_usec);
     float rnd = (float)rand() / (float)RAND_MAX;
-    INFO("dropMessage: rnd = %f, p = %f", rnd, p);
     return (rnd < p);
 }
 
-/*
-    Open a UDP socket
-    Create threads R and S
-    Allocate space for the 2 tables
-    Initialize all char ptrs to NULL
-*/
+// Opens a UDP socket, creates threads R and S, allocates space for the 2 tables
 int r_socket(int domain, int type, int protocol) {
+    struct timeval seed;
+    gettimeofday(&seed, NULL);
+    srand(seed.tv_usec);
+
     if (type != SOCK_MRP) {
         ERROR("r_socket: type must be SOCK_MRP");
         return -1;
@@ -365,32 +350,22 @@ int r_socket(int domain, int type, int protocol) {
             return -1;
         }
     }
-    DEBUG("pid: %d", getpid());
-    DEBUG("sockfd: %d", sockfd);
     return sockfd;
 }
 
-/*
-    bind
-*/
+// Binds the socket with an address and a port
 int r_bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
     int ret = bind(sockfd, addr, addrlen);
     return ret;
 }
 
-/*
-    send the message (by adding extra bytes to make the frame)
-    add the message to unacknowledged-message table
-*/
+// Sends the message (by adding extra bytes to make the frame), and adds the message to the unacknowledged-message table
 ssize_t r_sendto(int sockfd, const void *buf, size_t len, int flags,
                  const struct sockaddr *dest_addr, socklen_t addrlen) {
     char data_frame[MAX_FRAME_SIZE];
     data_frame[0] = DATA_TYPE;
     short msg_id = msg_cntr++;
     short msg_id_buf = htons(msg_id);
-    DEBUG("r_sendto: msg_id: %d", msg_id);
-    DEBUG("r_sendto: msg_cntr: %d", msg_cntr);
-    // DEBUG("r_sendto: buf: %s", (char *)buf);
     memcpy(data_frame + TYPE_SIZE, &msg_id_buf, MSG_ID_SIZE);
     memcpy(data_frame + TYPE_SIZE + MSG_ID_SIZE, buf, len);
     struct timeval sent_time;
@@ -400,28 +375,20 @@ ssize_t r_sendto(int sockfd, const void *buf, size_t len, int flags,
     if (sent_len >= 0) {
         tot_transm++;
         LOCK(&unackd_msg_table->mutex);
-        DEBUG("r_sendto: Before insert_unackd_table");
         insert_unackd_table(data_frame, len + TYPE_SIZE + MSG_ID_SIZE, flags, dest_addr, addrlen, sent_time, msg_id);
-        DEBUG("sent_len: %d", (int)sent_len);
-        DEBUG("r_sendto: After insert_unackd_table");
         UNLOCK(&unackd_msg_table->mutex);
     }
     return sent_len;
 }
 
-/*
-    check received-message table, if there return that message and delete from the table
-    if no message there, sleep for some time and check again
-    so essentially, this is a blocking call until we get any message in the table
-*/
+// Checks the received-message table, if there is a message then returns that message and deletes it from the table
+// If there is no message, sleeps for some time and checks again
 ssize_t r_recvfrom(int sockfd, void *buf, size_t len, int flags,
                    struct sockaddr *src_addr, socklen_t *addrlen) {
     while (1) {
         LOCK(&recvd_msg_tbl->mutex);
         if (recvd_msg_tbl->count > 0) {
-            DEBUG("Found a msg");
             size_t recv_len = dequeue_recvd_table(buf, len, src_addr, addrlen);
-            DEBUG("recv_len: %d", (int)recv_len);
             UNLOCK(&recvd_msg_tbl->mutex);
             return recv_len;
         } else {
@@ -431,14 +398,9 @@ ssize_t r_recvfrom(int sockfd, void *buf, size_t len, int flags,
     }
 }
 
-/*
-    kill threads R and S
-    destroy mutexes
-    free the tables (first free all char ptrs)
-    close the socket
-*/
+// Kills threads R and S, frees the tables, closes the socket
 int r_close(int fd) {
-    // check if everything has been acked, only then go ahead
+    // Check if everything has been acked, only then go ahead
     LOCK(&unackd_msg_table->mutex);
     while (unackd_msg_table->count > 0) {
         UNLOCK(&unackd_msg_table->mutex);
@@ -446,14 +408,10 @@ int r_close(int fd) {
         LOCK(&unackd_msg_table->mutex);
     }
 
-    DEBUG("r_close: before pthread_cancel tid_R");
     pthread_cancel(tid_R);
-    DEBUG("r_close: before pthread_cancel tid_S");
     pthread_cancel(tid_S);
-    int retval = pthread_join(tid_R, NULL);
-    DEBUG("pthread_join R: %d", retval);
-    retval = pthread_join(tid_S, NULL);
-    DEBUG("pthread_join S: %d", retval);
+    pthread_join(tid_R, NULL);
+    pthread_join(tid_S, NULL);
 
     free_recvd_table();
     free_unackd_table();
