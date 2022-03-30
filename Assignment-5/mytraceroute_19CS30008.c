@@ -1,3 +1,9 @@
+/*
+    Execution Instructions:
+    gcc -o mytraceroute_19CS30008 mytraceroute
+    sudo ./mytraceroute www.example.com
+*/
+
 #include <arpa/inet.h>
 #include <assert.h>
 #include <dirent.h>
@@ -30,53 +36,45 @@
 #define DEST_PORT 32164
 #define LOCAL_PORT 20000
 #define MAX_SIZE 100
-#define MAX_RUN_TIME 1000000 //microseconds
+#define MAX_RUN_TIME 1000000  // microseconds
 
 uint16_t in_cksum(uint16_t *addr, int len) {
     int nleft = len;
     uint32_t sum = 0;
     uint16_t *w = addr;
     uint16_t answer = 0;
-    /*
-     * Our algorithm is simple, using a 32 bit accumulator (sum), we add
-     * sequential 16 bit words to it, and at the end, fold back all the
-     * carry bits from the top 16 bits into the lower 16 bits.
-     */
     while (nleft > 1) {
         sum += *w++;
         nleft -= 2;
     }
-    /* mop up an odd byte, if necessary */
     if (nleft == 1) {
         *(unsigned char *)(&answer) = *(unsigned char *)w;
         sum += answer;
     }
-    sum = (sum >> 16) + (sum & 0xffff); /* add hi 16 to low 16 */
+    sum = (sum >> 16) + (sum & 0xffff);
     sum += (sum >> 16);
-    /* add carry */
     answer = ~sum;
-    /* truncate to 16 bits */
     return (answer);
 }
 
-void set_timeout (struct timeval *tv, int rem_time) {
+void set_timeout(struct timeval *tv, int rem_time) {
     tv->tv_sec = 0;
     tv->tv_usec = rem_time;
     return;
 }
 
-int get_time_in_ms (struct timeval *tv) {
-    return (int)tv->tv_sec*1000 + (int)tv->tv_usec/1000;
+int get_time_in_ms(struct timeval *tv) {
+    return (int)tv->tv_sec * 1000 + (int)tv->tv_usec / 1000;
 }
 
-void print (int ttl, struct sockaddr_in* addr , struct timeval* send, struct timeval* recv) {
+void print(int ttl, struct sockaddr_in *addr, struct timeval *send, struct timeval *recv) {
     char timeout[] = "       *";
     if (ttl == 1) {
-        printf("Hop_Count(ttl)\t\tIP address\t  Response_Time\n\n");
+        printf("Hop_Count(TTL)\t\tIP address\t  Response_Time\n\n");
     }
     if (addr == NULL) {
         printf("\t%-10d\t%-15s\t%-15s\n", ttl, timeout, timeout);
-        return ;
+        return;
     } else {
         struct timeval diff;
         timersub(recv, send, &diff);
@@ -100,7 +98,7 @@ int main(int argc, char *argv[]) {
     struct in_addr dest_ip = *(struct in_addr *)h->h_addr_list[0];
 
     // print destination ip
-    printf("\nDestination IP for %s: %s\n\n",argv[1], inet_ntoa(dest_ip));
+    printf("Destination IP for %s: %s\n\n", argv[1], inet_ntoa(dest_ip));
 
     int sockfd_udp, sockfd_icmp;
     struct sockaddr_in local_addr, dest_addr;
@@ -149,7 +147,7 @@ int main(int argc, char *argv[]) {
     // iterate on Incremental Max Hop Values to check the Route of the Packet
     while (ttl <= 16) {
         srand(time(NULL));
-        int time_out = 0, done = 0; 
+        int time_out = 0, done = 0;
         for (int i = 0; i < 3; i++) {
             time_out = 0;
             struct timeval start, stop, curr;
@@ -187,7 +185,7 @@ int main(int argc, char *argv[]) {
 
             // fill the payload
             memcpy(send_buf + sizeof(struct iphdr) + sizeof(struct udphdr), payload, PAYLOAD_SIZE);
-            
+
             // send the udp packet to the destination
             if (sendto(sockfd_udp, send_buf, sizeof(struct iphdr) + sizeof(struct udphdr) + PAYLOAD_SIZE, 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr)) < 0) {
                 perror("Could not send packet");
@@ -230,7 +228,7 @@ int main(int argc, char *argv[]) {
                                 close(sockfd_udp);
                                 close(sockfd_icmp);
                                 exit(0);
-                            } else { // if the source IP address of the ICMP Destination Unreachable Message does not match with your target server IP address
+                            } else {  // if the source IP address of the ICMP Destination Unreachable Message does not match with your target server IP address
                                 gettimeofday(&curr, NULL);
                                 struct timeval diff;
                                 timersub(&curr, &start, &diff);
@@ -240,15 +238,14 @@ int main(int argc, char *argv[]) {
                                     break;
                                 }
                                 set_timeout(&tv, MAX_RUN_TIME - time_diff);
-
                             }
-                        } else if (recvd_icmp->type == ICMP_TIME_EXCEEDED && recvd_icmp->code == ICMP_EXC_TTL) { // if the icmp packet is for the time exceeded
-                                gettimeofday(&stop, NULL);
-                                print(ttl, &from_addr, &start, &stop);
-                                done = 1;
-                                break;
+                        } else if (recvd_icmp->type == ICMP_TIME_EXCEEDED && recvd_icmp->code == ICMP_EXC_TTL) {  // if the icmp packet is for the time exceeded
+                            gettimeofday(&stop, NULL);
+                            print(ttl, &from_addr, &start, &stop);
+                            done = 1;
+                            break;
                         }
-                    } else { // if the packet is not an icmp packet
+                    } else {  // if the packet is not an icmp packet
                         gettimeofday(&curr, NULL);
                         struct timeval diff;
                         timersub(&curr, &start, &diff);
@@ -274,10 +271,10 @@ int main(int argc, char *argv[]) {
         if (time_out) {
             // timed out all the 3 times
             print(ttl, NULL, NULL, NULL);
-        } 
+        }
         ttl++;
     }
-    close(sockfd_udp); // close the udp socket
-    close(sockfd_icmp); // close the icmp socket
-    exit(0); // exit the program
+    close(sockfd_udp);   // close the udp socket
+    close(sockfd_icmp);  // close the icmp socket
+    exit(0);             // exit the program
 }
